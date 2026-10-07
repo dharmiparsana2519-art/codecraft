@@ -12,6 +12,9 @@ self-marked against a mark scheme. Questions are generated fresh from randomised
 comes with an explanation. All generators are checked against real Python 3 (`tools/verify.py`) and against the
 in-browser engine (`tools/check.html`).
 
+**My questions** keeps every practice question you've answered — filter by topic, type, or mistakes vs correct,
+review your answer next to the right one, try it again, or redo all your mistakes in one session.
+
 ## How it works
 - Plain HTML, CSS and JavaScript — no build step, no server, no account.
 - Python runs in the browser with [Skulpt](https://skulpt.org) 1.2.0; the editor is CodeMirror 5.

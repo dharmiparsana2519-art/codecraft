@@ -386,8 +386,9 @@ code { font-family: var(--font-m); font-size: .88em; }
 .top-link { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: var(--pill); border: 1px solid var(--border); background: var(--surface); text-decoration: none; font-weight: 700; font-size: 13.5px; white-space: nowrap; }
 .top-link:hover { border-color: var(--border-2); }
 .top-link .ic { color: var(--ink); width: 18px; height: 18px; }
-[data-screen=practice] .top-link { background: var(--ink); color: var(--bg); border-color: transparent; }
-[data-screen=practice] .top-link .ic { color: var(--bg); }
+[data-screen=practice]:not([data-sub=review]) #practiceLink, [data-sub=review] #reviewLink { background: var(--ink); color: var(--bg); border-color: transparent; }
+[data-screen=practice]:not([data-sub=review]) #practiceLink .ic, [data-sub=review] #reviewLink .ic { color: var(--bg); }
+.top-link + .top-link { margin-left: 0; }
 .top-link { margin-left: auto; }
 .top-link + .top-right { margin-left: 8px; }
 .eyebrow .ic { width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; }
@@ -548,4 +549,58 @@ code { font-family: var(--font-m); font-size: .88em; }
   .q-card { padding: 18px 16px; }
   .q-kind { margin-left: 0; width: 100%; }
   .why { margin-left: 8px; }
+}
+
+/* ================= MY QUESTIONS ================= */
+.mini-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 13.5px; font-weight: 700; color: var(--ink); text-decoration: none; }
+.mini-link:hover { text-decoration: underline; }
+.mini-link .ic { width: 15px; height: 15px; }
+.rv-tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; padding: 14px 16px; margin: 4px 0 16px; }
+.rv-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-family: var(--font-m); flex: 1 1 200px; }
+.rv-field select { font: 15px var(--font-b); text-transform: none; letter-spacing: 0; color: var(--text); background: var(--surface-2); border: 1.5px solid var(--border-2); border-radius: var(--radius-sm); padding: 8px 10px; }
+.seg { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); flex-wrap: wrap; }
+.seg-b { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 9px; font-size: 14px; font-weight: 700; color: var(--muted); text-decoration: none; }
+.seg-b b { font-family: var(--font-m); font-size: 12px; padding: 0 6px; border-radius: 6px; background: var(--surface); }
+.seg-b .ic { width: 14px; height: 14px; stroke-width: 3; }
+.seg-b.on { background: var(--surface); color: var(--text); box-shadow: inset 0 0 0 1.5px var(--border-2); }
+.seg-b.bad .ic { color: var(--bad); } .seg-b.ok .ic { color: var(--ok); }
+.rv-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.rv-item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; text-decoration: none; border-left: 5px solid var(--border-2); transition: transform .12s, border-color .15s; }
+.rv-item:hover { transform: translateX(2px); }
+.rv-item.st-wrong, .rv-item.st-part { border-left-color: var(--bad); }
+.rv-item.st-right { border-left-color: var(--ok); }
+.rv-item.st-fixed { border-left-color: var(--a1); }
+.rv-st { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 50%; }
+.rv-st .ic { width: 18px; height: 18px; stroke-width: 3; }
+.st-wrong .rv-st, .st-part .rv-st { background: var(--bad-bg); color: var(--bad); }
+.st-right .rv-st { background: var(--ok-bg); color: var(--ok); }
+.st-fixed .rv-st { background: color-mix(in srgb, var(--a1) 15%, transparent); color: var(--ink); }
+.rv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.rv-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-weight: 700; font-size: 14.5px; }
+.rv-top code { font-family: var(--font-m); font-size: 12px; color: var(--ink); }
+.rv-kind { font-weight: 400; font-size: 13px; color: var(--faint); }
+.rv-prev { font-size: 14px; color: var(--muted); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.45; }
+.rv-side { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: none; text-align: right; }
+.rv-side b { font-family: var(--font-m); font-size: 14px; }
+.rv-side small { font-size: 12px; color: var(--faint); white-space: nowrap; }
+.rv-more { margin-top: 14px; display: flex; justify-content: center; }
+.rv-empty { padding: 22px; text-align: center; color: var(--muted); }
+.rv-badge.st-wrong, .rv-badge.st-part { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); background: var(--bad-bg); }
+.rv-badge.st-right { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: var(--ok-bg); }
+.rv-badge.st-fixed { color: var(--ink); border-color: color-mix(in srgb, var(--a1) 40%, transparent); background: color-mix(in srgb, var(--a1) 12%, transparent); }
+.rv-badge .ic { stroke-width: 3; }
+.rv-attempts { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.rv-attempts li { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; padding: 5px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); }
+.rv-attempts li .ic { width: 14px; height: 14px; stroke-width: 3; }
+.rv-attempts li.ok .ic { color: var(--ok); } .rv-attempts li.bad .ic { color: var(--bad); }
+.q-banner { display: flex; align-items: center; gap: 8px; margin: -6px 0 14px; padding: 9px 12px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--hl) 45%, transparent); font-size: 14px; font-weight: 700; }
+.q-banner .ic { flex: none; color: var(--ink); }
+.rd-prog { height: 8px; margin-top: 14px; border-radius: 9px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; }
+.rd-prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--a1), var(--ok)); transition: width .4s; }
+.rd-done { padding: 26px; text-align: center; }
+.rd-done .h2 { justify-content: center; }
+.rd-done .hero-actions { justify-content: center; }
+@media (max-width: 640px) {
+  .rv-item { flex-wrap: wrap; gap: 10px; }
+  .rv-side { flex-direction: row; gap: 10px; width: 100%; justify-content: flex-start; padding-left: 46px; }
 }

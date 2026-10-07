@@ -1,6 +1,9 @@
 /* practice/ui.js — renders one practice question and marks the answer.
-   CodeCraft.practiceUI.render(host, question, onResult) → { destroy() }
-   onResult({ ok, score, max }) is called once, when the question has been answered. */
+   CodeCraft.practiceUI.render(host, question, onResult, opts) → { destroy() }
+   onResult({ ok, score, max, ans }) is called once, when the question has been answered;
+   `ans` is a small record of what the student answered, so the question can be reviewed later.
+   opts.replay = a saved `ans`: the card replays that answer and shows the marking (review mode).
+   opts.banner = HTML shown at the top of the card. */
 window.CodeCraft = window.CodeCraft || {};
 
 (function (CC) {
@@ -24,11 +27,12 @@ window.CodeCraft = window.CodeCraft || {};
   const normOut = s => String(s).replace(/\r/g, '').split('\n').map(l => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
   const normCell = s => String(s).trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '').toLowerCase();
 
-  function render(host, q, onResult) {
-    let done = false, extraCleanup = null;
+  function render(host, q, onResult, opts = {}) {
+    let done = false, extraCleanup = null, ans = null;
+    const replay = opts.replay || null;
     const card = document.createElement('article');
     card.className = 'card q-card';
-    card.innerHTML = `
+    card.innerHTML = `${opts.banner ? `<div class="q-banner">${opts.banner}</div>` : ''}
       <header class="q-meta">
         <span class="tag tag-ref">${esc(q.topicRef || q.topic)}</span>
         <span class="q-term">${esc(q.term)}</span>
@@ -49,7 +53,7 @@ window.CodeCraft = window.CodeCraft || {};
       if (done) return;
       done = true;
       card.classList.add('answered', ok ? 'is-right' : 'is-wrong');
-      onResult({ ok, score, max });
+      onResult({ ok, score, max, ans });
     };
     const feedback = (ok, html) => {
       fb.hidden = false;
@@ -85,6 +89,7 @@ window.CodeCraft = window.CodeCraft || {};
         body.querySelector('.opts').classList.add('show');
         body.querySelectorAll('.opt').forEach(b => { b.disabled = true; });
         const ok = !!q.options[i].ok;
+        ans = { pick: i, text: String(q.options[i].text).slice(0, 300) };
         feedback(ok, '');
         finish(ok, ok ? q.marks : 0, q.marks);
       };
@@ -96,6 +101,7 @@ window.CodeCraft = window.CodeCraft || {};
       };
       document.addEventListener('keydown', keys);
       extraCleanup = () => document.removeEventListener('keydown', keys);
+      if (replay && replay.pick >= 0 && replay.pick < q.options.length) choose(replay.pick);
     }
 
     /* ---------- predict the output ---------- */
@@ -108,6 +114,7 @@ window.CodeCraft = window.CodeCraft || {};
       const check = give => {
         if (done) return;
         const ok = !give && normOut(ta.value) === normOut(q.answer);
+        ans = { text: ta.value.slice(0, 2000), gave: !!give };
         ta.readOnly = true;
         feedback(give ? null : ok, (ok ? '' : `<p class="q-sub">Expected output</p><pre class="q-expected">${esc(q.answer) || '<em>(nothing is printed)</em>'}</pre>`) + (q.explain || '') + runIt());
         wireRun();
@@ -117,6 +124,7 @@ window.CodeCraft = window.CodeCraft || {};
       actions.querySelector('[data-check]').addEventListener('click', () => check(false));
       actions.querySelector('[data-give]').addEventListener('click', () => check(true));
       ta.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); check(false); } });
+      if (replay) { ta.value = replay.text || ''; check(!!replay.gave); }
     }
 
     /* ---------- trace table ---------- */
@@ -131,6 +139,7 @@ window.CodeCraft = window.CodeCraft || {};
       const check = give => {
         if (done) return;
         let right = 0;
+        ans = { cells: inputs.map(i => i.value.slice(0, 120)), gave: !!give };
         inputs.forEach(inp => {
           const ok = !give && normCell(inp.value) === normCell(inp.dataset.v);
           if (ok) right++;
@@ -147,11 +156,12 @@ window.CodeCraft = window.CodeCraft || {};
       actions.querySelector('[data-check]').addEventListener('click', () => check(false));
       actions.querySelector('[data-give]').addEventListener('click', () => check(true));
       inputs.forEach((inp, i) => inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (inputs[i + 1]) inputs[i + 1].focus(); else check(false); } }));
+      if (replay) { inputs.forEach((inp, i) => { inp.value = (replay.cells || [])[i] || ''; }); check(!!replay.gave); }
     }
 
     /* ---------- write code (auto-graded) ---------- */
     if (q.kind === 'code') {
-      let attempts = 0, revealed = false, cm = null, ta = null;
+      let attempts = 0, revealed = false, cm = null, ta = null, last = { passed: 0, total: 0 };
       const banned = (q.banned || []).map(b => b.label);
       body.innerHTML = `
         ${banned.length ? `<p class="q-ban"><span class="badge-nb">No built-ins</span> Not allowed: ${banned.map(b => `<code>${esc(b)}</code>`).join(', ')}</p>` : ''}
@@ -193,20 +203,27 @@ window.CodeCraft = window.CodeCraft || {};
         if (printed) html += `<p class="q-sub">Your program also printed</p><pre class="q-run-out">${esc(printed)}</pre>`;
         tests.innerHTML = html;
         const ok = res.ok && items.length > 0 && passed === items.length;
-        if (ok && !revealed) { feedback(true, `<p>All ${items.length} tests pass${attempts > 1 ? ` (attempt ${attempts})` : ' first time'}.</p><details class="q-model"><summary>Compare with a model solution</summary>${codeBlock(q.solution)}</details>`); finish(true, q.marks, q.marks); lockSolution(); }
+        last = { passed, total: items.length };
+        if (ok && !revealed) { ans = { code: code.slice(0, 4000), passed, total: items.length }; feedback(true, `<p>All ${items.length} tests pass${attempts > 1 ? ` (attempt ${attempts})` : ' first time'}.</p><details class="q-model"><summary>Compare with a model solution</summary>${codeBlock(q.solution)}</details>`); finish(true, q.marks, q.marks); lockSolution(); }
         else if (attempts >= 2) { solBtn.disabled = false; solBtn.innerHTML = `${ICON('book')}<span>Show solution</span>`; }
       }
       function lockSolution() { actions.querySelectorAll('[data-sol], [data-hint]').forEach(b => b.remove()); }
       actions.querySelector('[data-test]').addEventListener('click', test);
       actions.querySelector('[data-hint]').addEventListener('click', () => { body.querySelector('.q-hint').hidden = false; });
-      solBtn.addEventListener('click', () => {
+      const reveal = () => {
         revealed = true;
         const s = body.querySelector('.q-solution'); s.hidden = false;
         s.innerHTML = `<p class="q-sub">Model solution</p>${codeBlock(q.solution)}`;
         solBtn.remove();
-        if (!done) finish(false, 0, q.marks);
-      });
-      extraCleanup = () => { if (!done && attempts > 0) finish(false, 0, q.marks); };
+        if (!done) { ans = { code: getCode().slice(0, 4000), revealed: true, ...last }; finish(false, 0, q.marks); }
+      };
+      solBtn.addEventListener('click', reveal);
+      extraCleanup = () => { if (!done && attempts > 0) { ans = { code: getCode().slice(0, 4000), ...last }; finish(false, 0, q.marks); } };
+      if (replay) {
+        if (cm) cm.setValue(replay.code || q.starter); else ta.value = replay.code || q.starter;
+        done = true; // reviewing: nothing is recorded
+        test().then(() => { if (body.querySelector('.q-solution').hidden && solBtn.isConnected) reveal(); });
+      }
     }
 
     /* ---------- written (self-marked against a mark scheme) ---------- */
@@ -225,12 +242,21 @@ window.CodeCraft = window.CodeCraft || {};
         boxes.forEach(b => b.addEventListener('change', () => { actions.querySelector('.ms-score').textContent = `${score()} / ${q.marks}`; }));
         actions.querySelector('[data-save]').addEventListener('click', () => {
           const s = score();
+          ans = { text: body.querySelector('textarea').value.slice(0, 2000), ticks: boxes.map((b, i) => (b.checked ? i : -1)).filter(i => i >= 0) };
           boxes.forEach(b => { b.disabled = true; });
           actions.querySelector('[data-save]').remove();
           feedback(s === q.marks ? true : null, `<p>You gave yourself <strong>${s} / ${q.marks}</strong>.</p>`);
           finish(s === q.marks, s, q.marks);
         });
       });
+    }
+
+    if (replay && q.kind === 'written') {
+      body.querySelector('textarea').value = replay.text || '';
+      body.querySelector('textarea').readOnly = true;
+      actions.querySelector('[data-ms]').click();
+      body.querySelectorAll('.ms-list input').forEach((b, i) => { b.checked = (replay.ticks || []).includes(i); b.dispatchEvent(new Event('change')); });
+      actions.querySelector('[data-save]').click();
     }
 
     return { el: card, destroy() { if (extraCleanup) extraCleanup(); card.remove(); }, get done() { return done; } };

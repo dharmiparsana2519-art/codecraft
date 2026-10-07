@@ -82,6 +82,52 @@ log.close()
     return Object.keys(PR()).filter(id => PR()[id].n >= 3 && hasPractice(id))
       .sort((a, b) => PR()[a].c / PR()[a].n - PR()[b].c / PR()[b].n).slice(0, k);
   }
+  /* Question history ("My questions"). Each question is stored by topic + generator + seed, which is enough to
+     rebuild it exactly, plus what was answered on each attempt. Kept under its own key so it can grow. */
+  const HKEY = 'codecraft.history.v1';
+  const H = (() => {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(HKEY) || 'null'); } catch (e) { d = null; }
+    return d && d.items && Array.isArray(d.order) ? d : { items: {}, order: [] };
+  })();
+  function saveHistory() {
+    for (let i = 0; i < 6; i++) {
+      try { localStorage.setItem(HKEY, JSON.stringify(H)); return; }
+      catch (e) { const drop = H.order.splice(0, 50); drop.forEach(id => delete H.items[id]); if (!drop.length) return; } // storage full: forget the oldest
+    }
+  }
+  const qid = q => `${q.topic}|${q.gen}|${q.seed}`;
+  function previewOf(q) {
+    const text = String(q.prompt).replace(/<details[\s\S]*?<\/details>/g, '').replace(/<blockquote>([\s\S]*?)<\/blockquote>/g, ' “$1”').replace(/<[^>]+>/g, ' ')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
+    const line = q.code ? q.code.split('\n').find(l => l.trim() && !/^\s*#/.test(l)) : '';
+    return (text.length > 150 ? text.slice(0, 147) + '…' : text) + (line ? ' ⟶ ' + line.trim().slice(0, 60) : '');
+  }
+  function recordAttempt(q, res) {
+    const id = qid(q);
+    let it = H.items[id];
+    if (!it) it = H.items[id] = { topic: q.topic, gen: q.gen, seed: q.seed, kind: q.kind, term: q.term, marks: q.marks, preview: previewOf(q), attempts: [] };
+    else H.order.splice(H.order.indexOf(id), 1);
+    H.order.push(id);
+    it.attempts.push({ t: Date.now(), ok: !!res.ok, score: res.score, max: res.max, ans: res.ans || null });
+    if (it.attempts.length > 6) it.attempts.splice(1, it.attempts.length - 6); // keep the first attempt and the latest ones
+    if (H.order.length > 800) H.order.splice(0, H.order.length - 800).forEach(x => delete H.items[x]);
+    saveHistory();
+  }
+  function itemStatus(it) {
+    const last = it.attempts[it.attempts.length - 1];
+    if (last.ok) return it.attempts.some(a => !a.ok) ? 'fixed' : 'right';
+    return last.score > 0 ? 'part' : 'wrong';
+  }
+  const isMistake = it => !it.attempts[it.attempts.length - 1].ok;
+  // Every practice answer goes through here: topic stats, trace count, streak and history.
+  function recordResult(q, res) {
+    const s = PR()[q.topic] = PR()[q.topic] || { n: 0, c: 0, s: 0, m: 0 };
+    s.n++; s.s += res.score; s.m += res.max; if (res.ok) s.c++;
+    if (res.ok && q.kind === 'trace') P.traces = (P.traces || 0) + 1;
+    recordAttempt(q, res);
+    touchDay(); save(); renderChips();
+  }
   const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   function touchDay() {
     const k = dayKey(new Date());
@@ -246,6 +292,7 @@ log.close()
             <h3>${ICON('infinity')}Unlimited practice</h3>
             <p>Fresh exam-style questions for every SL topic, marked instantly, with an explanation for every answer.</p>
             <div class="hero-actions"><a class="btn sm primary" href="#/practice/mix">${ICON('bolt')}Mixed practice</a><a class="btn sm" href="#/practice">Choose a topic</a></div>
+            ${H.order.length ? (() => { const m = H.order.filter(id => isMistake(H.items[id])).length; return `<a class="mini-link" href="#/review${m ? '?status=wrong' : ''}">${ICON('history')}${m ? `${m} question${m === 1 ? '' : 's'} to review again` : `Review your ${H.order.length} answered questions`} →</a>`; })() : ''}
           </div>
         </aside>
       </div>`;
@@ -399,6 +446,7 @@ log.close()
       <div class="card side-prog"><div class="mini-ring">${ring(pc(tot.c, tot.n), 46, 4, 19)}<em>${tot.n ? pc(tot.c, tot.n) + '%' : '–'}</em></div>
         <div><b>Practice</b><span>${tot.n} answered · ${tot.topics} topic${tot.topics === 1 ? '' : 's'}</span></div></div>
       <nav class="ptree" aria-label="Practice topics">
+        <a class="pt-link pt-mix${activeId === 'review' ? ' active' : ''}" href="#/review">${ICON('history')}<span>My questions</span>${H.order.length ? `<em class="pt-acc ${H.order.some(id => isMistake(H.items[id])) ? 'low' : 'good'}">${H.order.filter(id => isMistake(H.items[id])).length} to fix</em>` : ''}</a>
         <a class="pt-link pt-mix${activeId === 'mix' ? ' active' : ''}" href="${pHref('mix')}">${ICON('bolt')}Mixed — all topics</a>
         <a class="pt-link pt-mix${activeId === 'weak' ? ' active' : ''}" href="${pHref('weak')}">${ICON('target')}My weakest topics</a>
         ${mods.map(([m, ls]) => `<div class="side-label">${m.num} · ${esc(m.title)}</div>${ls.map(l => { const st = topicStat(l.id); return `<a class="pt-link${l.id === activeId ? ' active' : ''}" href="${pHref(l.id)}"${l.id === activeId ? ' aria-current="page"' : ''}><span>${esc(CodeCraft.lessonLabel(l))}</span>${st.n ? `<em class="pt-acc ${pc(st.c, st.n) >= 70 ? 'good' : pc(st.c, st.n) >= 40 ? 'mid' : 'low'}">${pc(st.c, st.n)}%</em>` : ''}</a>`; }).join('')}`).join('')}
@@ -417,6 +465,7 @@ log.close()
           <div class="hero-actions">
             <a class="btn primary" href="${pHref('mix')}">${ICON('bolt')}Mixed practice</a>
             <a class="btn" href="${pHref('weak')}">${ICON('target')}My weakest topics</a>
+            <a class="btn" href="#/review">${ICON('history')}My questions${H.order.length ? ` (${H.order.length})` : ''}</a>
           </div>
         </div>
         <div class="ring" id="ring">${ring(pc(tot.c, tot.n), 164, 12, 70)}<div class="ring-c"><b>${tot.n ? pc(tot.c, tot.n) + '%' : '–'}</b><span>${tot.n} answered</span></div></div>
@@ -469,6 +518,7 @@ log.close()
         <div class="pr-next">
           <button class="btn primary" id="nextQ">${ICON('arrow')}<span>Skip</span></button>
           ${single ? `<a class="btn" href="${href(id)}">${ICON('book')}Back to the lesson</a>` : ''}
+          <a class="btn" href="#/review${single ? '?topic=' + encodeURIComponent(id) : ''}">${ICON('history')}Review my answers</a>
         </div>
       </div>`;
     const sessionChips = () => {
@@ -484,11 +534,9 @@ log.close()
       nextBtn.querySelector('span').textContent = 'Skip';
       nextBtn.classList.remove('primary');
       current = CodeCraft.practiceUI.render($('#qHost'), q, res => {
-        const s = PR()[q.topic] = PR()[q.topic] || { n: 0, c: 0, s: 0, m: 0 };
-        s.n++; s.s += res.score; s.m += res.max; if (res.ok) s.c++;
-        if (res.ok && q.kind === 'trace') P.traces = (P.traces || 0) + 1;
+        recordResult(q, res);
         session.n++; if (res.ok) { session.c++; session.run++; } else session.run = 0;
-        touchDay(); save(); renderChips(); sessionChips();
+        sessionChips();
         renderSidebar(id);
         nextBtn.querySelector('span').textContent = 'Next question';
         nextBtn.classList.add('primary');
@@ -501,6 +549,203 @@ log.close()
     sessionChips();
     next();
   }
+  /* ================= MY QUESTIONS (review) ================= */
+  const KINDS = { mcq: 'Multiple choice', output: 'Predict the output', trace: 'Trace table', code: 'Write code', written: 'Written answer' };
+  const STATUS = { wrong: ['Wrong', 'x'], part: ['Part marks', 'x'], right: ['Correct', 'check'], fixed: ['Fixed', 'check'] };
+  const fmtDate = t => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const fmtTime = t => new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const qsOf = obj => new URLSearchParams(Object.entries(obj).filter(([, v]) => v && v !== 'all')).toString();
+  const withQs = (path, obj) => { const qs = qsOf(obj); return path + (qs ? '?' + qs : ''); };
+  let reviewFilter = {}; // remembered so "back" returns to the same filtered list
+  function reviewItems(f) {
+    return H.order.slice().reverse().map(id => [id, H.items[id]]).filter(([, it]) => it
+      && (!f.topic || f.topic === 'all' || it.topic === f.topic)
+      && (!f.kind || f.kind === 'all' || it.kind === f.kind)
+      && (!f.status || f.status === 'all' || (f.status === 'wrong' ? isMistake(it) : !isMistake(it))));
+  }
+  const genFor = it => (CodeCraft.practice.gens[it.topic] || []).find(g => g.id === it.gen);
+  function rebuild(it) {
+    const gen = genFor(it), l = CodeCraft.findLesson(it.topic);
+    if (!gen || !l) return null;
+    const q = CodeCraft.practice.generate(gen, it.seed);
+    q.topicRef = l.ref;
+    return q;
+  }
+
+  function renderReview(f) {
+    reviewFilter = f;
+    const base = { topic: f.topic, kind: f.kind };
+    const inScope = reviewItems(base), list = reviewItems(f);
+    const nWrong = inScope.filter(([, it]) => isMistake(it)).length, nFixed = inScope.filter(([, it]) => itemStatus(it) === 'fixed').length;
+    const topics = LESSONS.filter(l => H.order.some(id => H.items[id] && H.items[id].topic === l.id));
+    const count = t => H.order.filter(id => H.items[id] && H.items[id].topic === t).length;
+    const kinds = Object.keys(KINDS).filter(k => H.order.some(id => H.items[id] && H.items[id].kind === k));
+    const status = f.status || 'all';
+    if (!H.order.length) {
+      $('#main').innerHTML = `<section class="card home-hero tape"><div><p class="eyebrow">${ICON('history')}My questions</p><h1 class="home-title">Nothing to review <em>yet.</em></h1>
+        <p class="sub">Every practice question you answer is saved here — right or wrong — so you can look back at your answers, read the explanations again and retry your mistakes.</p>
+        <div class="hero-actions"><a class="btn primary" href="#/practice">${ICON('infinity')}Start practising</a></div></div></section>`;
+      return;
+    }
+    $('#main').innerHTML = `
+      <section class="card home-hero tape">
+        <div>
+          <p class="eyebrow">${ICON('history')}My questions</p>
+          <h1 class="home-title">Learn from your <em>mistakes.</em></h1>
+          <p class="sub">Every practice question you've answered, with your answer, the right answer and the explanation. Open one to review it and try it again, or redo all your mistakes in one go.</p>
+          <div class="hero-actions">
+            ${nWrong ? `<a class="btn primary" href="${withQs('#/review/redo', base)}">${ICON('reset')}Redo ${nWrong} mistake${nWrong === 1 ? '' : 's'}</a>` : ''}
+            <a class="btn" href="${f.topic && f.topic !== 'all' ? pHref(f.topic) : '#/practice'}">${ICON('infinity')}New questions</a>
+          </div>
+        </div>
+      </section>
+      <section class="stats" aria-label="Summary">
+        <div class="card stat">${ICON('quiz')}<span class="stat-v">${inScope.length}</span><span class="stat-l">Questions answered</span></div>
+        <div class="card stat">${ICON('check')}<span class="stat-v">${inScope.length - nWrong}</span><span class="stat-l">Correct now</span></div>
+        <div class="card stat">${ICON('x')}<span class="stat-v">${nWrong}</span><span class="stat-l">Still to fix</span></div>
+        <div class="card stat">${ICON('reset')}<span class="stat-v">${nFixed}</span><span class="stat-l">Wrong, then fixed</span></div>
+      </section>
+      <div class="card rv-tools">
+        <label class="rv-field">Topic
+          <select id="rvTopic"><option value="all">All topics (${H.order.length})</option>${topics.map(l => `<option value="${esc(l.id)}"${f.topic === l.id ? ' selected' : ''}>${esc(CodeCraft.lessonLabel(l))} (${count(l.id)})</option>`).join('')}</select></label>
+        <label class="rv-field">Type
+          <select id="rvKind"><option value="all">All types</option>${kinds.map(k => `<option value="${k}"${f.kind === k ? ' selected' : ''}>${KINDS[k]}</option>`).join('')}</select></label>
+        <nav class="seg" aria-label="Filter by result">
+          <a class="seg-b${status === 'all' ? ' on' : ''}" href="${withQs('#/review', { ...base })}"${status === 'all' ? ' aria-current="true"' : ''}>All <b>${inScope.length}</b></a>
+          <a class="seg-b bad${status === 'wrong' ? ' on' : ''}" href="${withQs('#/review', { ...base, status: 'wrong' })}"${status === 'wrong' ? ' aria-current="true"' : ''}>${ICON('x')}Mistakes <b>${nWrong}</b></a>
+          <a class="seg-b ok${status === 'right' ? ' on' : ''}" href="${withQs('#/review', { ...base, status: 'right' })}"${status === 'right' ? ' aria-current="true"' : ''}>${ICON('check')}Correct <b>${inScope.length - nWrong}</b></a>
+        </nav>
+      </div>
+      ${list.length ? '<ol class="rv-list" id="rvList"></ol><div class="rv-more"></div>' : `<div class="card rv-empty">${status === 'wrong' ? 'No mistakes here — everything in this list is correct now.' : 'No questions match these filters.'}</div>`}`;
+    $('#rvTopic').addEventListener('change', e => { location.hash = withQs('#/review', { ...f, topic: e.target.value }); });
+    $('#rvKind').addEventListener('change', e => { location.hash = withQs('#/review', { ...f, kind: e.target.value }); });
+    const row = ([id, it]) => {
+      const st = itemStatus(it), last = it.attempts[it.attempts.length - 1], l = CodeCraft.findLesson(it.topic);
+      return `<li><a class="card rv-item st-${st}" href="#/review/q/${encodeURIComponent(id)}">
+        <span class="rv-st" title="${STATUS[st][0]}">${ICON(STATUS[st][1])}</span>
+        <span class="rv-main"><span class="rv-top"><code>${esc(l ? l.ref : it.topic)}</code><span>${esc(l ? l.title : '')}</span><span class="rv-kind">${esc(it.term)} · ${KINDS[it.kind]}</span></span>
+          <span class="rv-prev">${esc(it.preview)}</span></span>
+        <span class="rv-side"><b>${last.score} / ${last.max}</b><small>${STATUS[st][0]}${it.attempts.length > 1 ? ` · ${it.attempts.length} tries` : ''}</small><small>${fmtDate(last.t)}</small></span></a></li>`;
+    };
+    let shown = 0;
+    const more = () => {
+      const ol = $('#rvList'), next = list.slice(shown, shown + 40);
+      ol.insertAdjacentHTML('beforeend', next.map(row).join(''));
+      shown += next.length;
+      $('.rv-more').innerHTML = shown < list.length ? `<button class="btn">Show more (${list.length - shown} left)</button>` : '';
+      const b = $('.rv-more button'); if (b) b.addEventListener('click', more);
+    };
+    if (list.length) more();
+  }
+
+  function renderReviewItem(id) {
+    const it = H.items[id], back = withQs('#/review', reviewFilter);
+    const q = it && rebuild(it);
+    if (!it || !q) {
+      $('#main').innerHTML = `<div class="card missing"><h1 class="lesson-title">Question not found</h1><p class="lede" style="margin:0 auto 18px">${it ? 'This question type has changed since you answered it, so it can\'t be rebuilt.' : 'It may have been removed from your history.'}</p><a class="btn primary" href="${back}">${ICON('left')}Back to My questions</a></div>`;
+      return;
+    }
+    const l = CodeCraft.findLesson(it.topic), listIds = reviewItems(reviewFilter).map(x => x[0]);
+    const after = listIds.slice(listIds.indexOf(id) + 1).concat(listIds.slice(0, listIds.indexOf(id)));
+    const nextMistake = after.find(x => H.items[x] && isMistake(H.items[x]));
+    $('#main').innerHTML = `
+      <div class="pr-wrap">
+        <header class="pr-head">
+          <div class="tags"><a class="tag" href="${back}">${ICON('left')}My questions</a><span class="tag tag-ref">${esc(l.ref)}</span><span class="tag rv-badge" id="rvBadge"></span></div>
+          <h1 class="lesson-title"><em>${esc(l.title)}</em></h1>
+          <ol class="rv-attempts" id="rvAttempts" aria-label="Your attempts"></ol>
+        </header>
+        <div id="qHost"></div>
+        <div class="pr-next">
+          <button class="btn primary" id="retryQ">${ICON('reset')}<span>Try it again</span></button>
+          <button class="btn" id="showQ" hidden>${ICON('history')}<span>Show my last answer</span></button>
+          ${nextMistake ? `<a class="btn" href="#/review/q/${encodeURIComponent(nextMistake)}">${ICON('arrow')}Next mistake</a>` : ''}
+          <a class="btn" href="${pHref(it.topic)}">${ICON('infinity')}New questions on this topic</a>
+        </div>
+      </div>`;
+    const head = () => {
+      const st = itemStatus(it);
+      $('#rvBadge').className = 'tag rv-badge st-' + st;
+      $('#rvBadge').innerHTML = ICON(STATUS[st][1]) + STATUS[st][0];
+      $('#rvAttempts').innerHTML = it.attempts.map((a, i) => `<li class="${a.ok ? 'ok' : 'bad'}">${ICON(a.ok ? 'check' : 'x')}<span>${i === it.attempts.length - 1 && i ? 'Latest' : 'Try ' + (i + 1)} · ${a.score}/${a.max} · ${fmtTime(a.t)}</span></li>`).join('');
+    };
+    const showLast = () => {
+      if (current) current.destroy();
+      const last = it.attempts[it.attempts.length - 1];
+      current = CodeCraft.practiceUI.render($('#qHost'), rebuild(it), () => {}, last.ans
+        ? { replay: last.ans, banner: `${ICON('history')}Your ${it.attempts.length > 1 ? 'latest ' : ''}answer from ${fmtTime(last.t)} — ${last.ok ? 'correct' : `${last.score} / ${last.max} mark${last.max === 1 ? '' : 's'}`}` }
+        : { banner: `${ICON('history')}Your answer to this one wasn't saved, but you can read the question and try it again.` });
+      $('#retryQ').hidden = false; $('#showQ').hidden = true;
+    };
+    $('#retryQ').addEventListener('click', () => {
+      if (current) current.destroy();
+      const was = itemStatus(it), fresh = rebuild(it);
+      current = CodeCraft.practiceUI.render($('#qHost'), fresh, res => {
+        recordResult(fresh, res); head(); renderSidebar('review');
+        toast(res.ok ? (was === 'right' || was === 'fixed' ? 'Correct again!' : 'Fixed — nice work!') : 'Not yet — read the explanation and try once more.');
+        if (res.ok && was !== 'right' && was !== 'fixed') confetti($('#retryQ'));
+        $('#retryQ').hidden = false; $('#retryQ span').textContent = 'Try it again';
+      }, { banner: `${ICON('reset')}New attempt — your answer will be marked and saved` });
+      $('#retryQ').hidden = true; $('#showQ').hidden = false;
+      window.scrollTo({ top: 0 });
+    });
+    $('#showQ').addEventListener('click', showLast);
+    head(); showLast();
+  }
+
+  function renderRedo(f) {
+    const ids = reviewItems({ ...f, status: 'wrong' }).map(x => x[0]).reverse(); // oldest mistakes first
+    const back = withQs('#/review', f), l = f.topic && f.topic !== 'all' ? CodeCraft.findLesson(f.topic) : null;
+    if (!ids.length) {
+      $('#main').innerHTML = `<div class="card missing"><h1 class="lesson-title">No mistakes to redo</h1><p class="lede" style="margin:0 auto 18px">Everything ${l ? 'in ' + esc(l.title) + ' ' : ''}is correct now.</p><a class="btn primary" href="${back}">${ICON('left')}Back to My questions</a></div>`;
+      return;
+    }
+    let i = 0, fixedN = 0, answered = false;
+    $('#main').innerHTML = `
+      <div class="pr-wrap">
+        <header class="pr-head">
+          <div class="tags"><a class="tag" href="${back}">${ICON('left')}My questions</a>${l ? `<span class="tag tag-ref">${esc(l.ref)}</span>` : ''}</div>
+          <h1 class="lesson-title"><em>Redo my mistakes</em></h1>
+          <p class="lede">${ids.length} question${ids.length === 1 ? '' : 's'} you didn't get fully right${l ? ' in ' + esc(l.title) : ''}, oldest first.</p>
+          <div class="rd-prog" aria-hidden="true"><i id="rdBar"></i></div>
+          <div class="pr-session"><span class="chip-stat" id="rdCount"></span><span class="chip-stat" id="rdFixed"></span></div>
+        </header>
+        <div id="qHost"></div>
+        <div class="pr-next"><button class="btn primary" id="nextQ">${ICON('arrow')}<span>Skip</span></button></div>
+      </div>`;
+    const nextBtn = $('#nextQ');
+    const status = () => {
+      $('#rdCount').textContent = `Question ${Math.min(i + 1, ids.length)} of ${ids.length}`;
+      $('#rdFixed').textContent = `Fixed so far: ${fixedN}`;
+      $('#rdBar').style.width = `${Math.round(i / ids.length * 100)}%`;
+    };
+    const show = () => {
+      if (current) { current.destroy(); current = null; }
+      if (i >= ids.length) {
+        $('#rdBar').style.width = '100%';
+        $('#qHost').innerHTML = `<div class="card rd-done tape"><h2 class="h2">You fixed ${fixedN} of ${ids.length}</h2><p>${fixedN === ids.length ? 'Every mistake is now correct — brilliant.' : 'The ones you missed stay in your Mistakes list, so you can come back to them.'}</p><div class="hero-actions"><a class="btn primary" href="${back}">${ICON('history')}Back to My questions</a><a class="btn" href="${l ? pHref(l.id) : '#/practice'}">${ICON('infinity')}New questions</a></div></div>`;
+        nextBtn.hidden = true; $('#rdCount').textContent = 'Finished';
+        if (fixedN) confetti($('.rd-done h2'));
+        return;
+      }
+      const it = H.items[ids[i]], q = it && rebuild(it);
+      if (!q) { i++; show(); return; }
+      answered = false; status();
+      nextBtn.querySelector('span').textContent = 'Skip'; nextBtn.classList.remove('primary');
+      current = CodeCraft.practiceUI.render($('#qHost'), q, res => {
+        answered = true; recordResult(q, res); renderSidebar('review');
+        if (res.ok) fixedN++;
+        status();
+        nextBtn.querySelector('span').textContent = i + 1 < ids.length ? 'Next mistake' : 'Finish';
+        nextBtn.classList.add('primary');
+        setTimeout(() => nextBtn.focus({ preventScroll: true }), 50);
+      }, { banner: `${ICON('reset')}You got this wrong before — have another go` });
+      window.scrollTo({ top: 0 });
+    };
+    nextBtn.addEventListener('click', () => { i++; show(); });
+    show();
+  }
+
   addEventListener('keydown', e => {
     if (document.body.dataset.screen !== 'practice' || e.ctrlKey || e.metaKey || e.altKey || (e.target.closest && e.target.closest('input, textarea, .CodeMirror, select'))) return;
     if ((e.key === 'n' || e.key === 'N') && $('#nextQ')) { e.preventDefault(); $('#nextQ').click(); }
@@ -523,10 +768,24 @@ log.close()
   const route = { lessonId: null, practice: null };
   function go(first) {
     const m = location.hash.match(/^#\/lesson\/(.+)$/), pm = location.hash.match(/^#\/practice(?:\/(.+))?$/);
+    const rv = location.hash.match(/^#\/review(?:\/(q|redo))?(?:\/([^?]+))?(?:\?(.*))?$/);
     closeDrawer();
     if (current) { current.destroy(); current = null; }
     route.practice = null;
-    if (pm) {
+    document.body.dataset.sub = rv ? 'review' : '';
+    if (rv) {
+      route.lessonId = null;
+      if (playground) { playground.destroy(); playground = null; }
+      if (stepObserver) stepObserver.disconnect();
+      document.body.dataset.screen = 'practice';
+      $('#crumbs').innerHTML = '';
+      route.practice = 'review';
+      const f = Object.fromEntries(new URLSearchParams(rv[3] || ''));
+      if (rv[1] === 'q') renderReviewItem(decodeURIComponent(rv[2] || ''));
+      else if (rv[1] === 'redo') renderRedo(f);
+      else renderReview(f);
+      document.title = 'My questions · CodeCraft';
+    } else if (pm) {
       route.lessonId = null;
       if (playground) { playground.destroy(); playground = null; }
       if (stepObserver) stepObserver.disconnect();

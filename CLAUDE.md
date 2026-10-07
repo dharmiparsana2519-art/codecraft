@@ -76,6 +76,11 @@ exercises, scan the student's code with a regex for banned names and fail with a
   1. CPython: `osascript -l JavaScript tools/export.js "$PWD" 100 /tmp/q.json && python3 tools/verify.py /tmp/q.json`
   2. Skulpt (what the site runs): `python3 tools/serve.py`, open `http://localhost:8765/tools/check.html?n=25`.
 - Stats live in localStorage under `practice[topic] = { n, c, s, m }` (answered, correct, marks scored, marks possible).
+- **My questions (`#/review`)**: every practice answer is saved in localStorage key `codecraft.history.v1` as
+  `{ topic, gen, seed, kind, term, marks, preview, attempts: [{ t, ok, score, max, ans }] }`. The seed rebuilds the exact
+  question, so **never change what an existing generator produces for a given seed without giving it a new `id`** —
+  otherwise old history entries show a different question. `ans` is replayed by `practiceUI.render(..., { replay })`.
+  Routes: `#/review?topic=&status=wrong|right&kind=`, `#/review/q/<topic|gen|seed>`, `#/review/redo?topic=`.
 
 ## Deployment
 - Live at **https://dharmiparsana2519-art.github.io/codecraft/** — GitHub repo `dharmiparsana2519-art/codecraft`,

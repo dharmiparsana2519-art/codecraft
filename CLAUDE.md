@@ -61,6 +61,11 @@ exercises, scan the student's code with a regex for banned names and fail with a
   Lesson = **split IDE layout** (lesson on the left, editor + console pinned on the right; course tree in a drawer;
   stacks on phones). Must work at phone width with visible keyboard focus.
 
+## Deployment
+- Live at **https://dharmiparsana2519-art.github.io/codecraft/** — GitHub repo `dharmiparsana2519-art/codecraft`,
+  GitHub Pages serving the `main` branch root (`.nojekyll` present). It runs without Claude: static files + CDNs.
+- To update the live site: commit and push to `main` (git needs GitHub sign-in — use the gh CLI as a credential helper: `git -c credential.helper="!gh auth git-credential" push`). Pages rebuilds in about a minute.
+
 ## Working style
 - Build in the phases in `PROMPTS.md`. After each phase, open the site in a browser and check it works before moving on.
 - Keep files small: `app.js` (routing, progress), `runner.js` (Skulpt), `widgets/*.js` (trace table, visualizers), `content/*.js`.

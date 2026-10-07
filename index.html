@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body data-screen="home">
 
@@ -42,6 +42,8 @@
   <symbol id="i-code" viewBox="0 0 24 24"><polyline points="8 7 3 12 8 17"/><polyline points="16 7 21 12 16 17"/></symbol>
   <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></symbol>
   <symbol id="i-quiz" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1V16h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-infinity" viewBox="0 0 24 24"><path d="M7.5 8.5C4.5 8.5 3 10.2 3 12s1.5 3.5 4.5 3.5c3.5 0 5.5-7 9-7 3 0 4.5 1.7 4.5 3.5s-1.5 3.5-4.5 3.5c-3.5 0-5.5-7-9-7z"/></symbol>
 </svg>
 
 <div class="bg" aria-hidden="true"></div>
@@ -55,6 +57,7 @@
       <span><span class="brand-name">CodeCraft</span><span class="brand-sub">IB CS · SL · Python</span></span>
     </a>
     <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
+    <a class="top-link" href="#/practice" id="practiceLink"><svg class="ic"><use href="#i-infinity"/></svg><span>Practice</span></a>
     <div class="top-right">
       <span class="chip-stat streak" id="streakChip" title="Days in a row you've practised"></span>
       <span class="chip-stat xp" id="progressChip" title="Course progress"></span>
@@ -88,11 +91,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
 <!-- CodeCraft -->
-<script src="runtime/vfs_preamble.js"></script>
-<script src="content/course.js"></script>
-<script src="runner.js"></script>
-<script src="widgets/playground.js"></script>
-<script src="app.js"></script>
+<script src="runtime/vfs_preamble.js?v=2"></script>
+<script src="content/course.js?v=2"></script>
+<script src="runner.js?v=2"></script>
+<script src="widgets/playground.js?v=2"></script>
+<!-- Unlimited practice: question engine, generators for every topic, question cards -->
+<script src="practice/core.js?v=2"></script>
+<script src="practice/gen-b1.js?v=2"></script>
+<script src="practice/gen-b21.js?v=2"></script>
+<script src="practice/gen-b22.js?v=2"></script>
+<script src="practice/gen-b23.js?v=2"></script>
+<script src="practice/gen-b24.js?v=2"></script>
+<script src="practice/gen-b3.js?v=2"></script>
+<script src="practice/ui.js?v=2"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeCraft question check</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; background: #F6F3E8; color: #22252D; }
+  pre { background: #fff; border: 1px solid #ddd; padding: 12px; white-space: pre-wrap; }
+  .ok { color: #15803D; } .bad { color: #BE123C; }
+</style>
+</head>
+<body>
+<h1>Practice question check (Skulpt)</h1>
+<p>Runs every "predict the output" program and every model solution for "write code" questions in the same Python engine the site uses, and compares the results. Open via a local server: <code>python3 tools/serve.py</code>, then <code>http://localhost:8765/tools/check.html?n=20</code>.</p>
+<p id="status">Running…</p>
+<pre id="out"></pre>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+<script src="../runtime/vfs_preamble.js?fresh"></script>
+<script src="../content/course.js?fresh"></script>
+<script src="../runner.js?fresh"></script>
+<script src="../practice/core.js?fresh"></script>
+<script src="../practice/gen-b1.js?fresh"></script>
+<script src="../practice/gen-b21.js?fresh"></script>
+<script src="../practice/gen-b22.js?fresh"></script>
+<script src="../practice/gen-b23.js?fresh"></script>
+<script src="../practice/gen-b24.js?fresh"></script>
+<script src="../practice/gen-b3.js?fresh"></script>
+<script>
+(async () => {
+  const P = CodeCraft.practice, n = +(new URLSearchParams(location.search).get('n') || 10);
+  const norm = s => String(s).replace(/\r/g, '').split('\n').map(l => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
+  const problems = []; let runs = 0;
+  for (const topic of Object.keys(P.gens)) for (const g of P.gens[topic]) {
+    if (g.kind !== 'output' && g.kind !== 'code') continue;
+    for (let i = 0; i < n; i++) {
+      const q = P.generate(g, (Math.imul(i + 1, 2246822519) + 7) >>> 0);
+      let out = '';
+      if (q.kind === 'output') {
+        const r = await CodeCraft.runner.run(q.run || ((q.setup ? q.setup + '\n' : '') + q.code), { onOutput: t => { out += t; }, files: q.files || {}, onInput: () => Promise.resolve('') });
+        if (!r.ok || norm(out) !== norm(q.answer)) problems.push(`${topic}/${g.id} seed ${q.seed}: expected ${JSON.stringify(q.answer)} got ${JSON.stringify(out)} ${r.error ? r.error.message : ''}`);
+      } else {
+        const r = await CodeCraft.runner.run(q.solution + '\n' + P.HARNESS + '\n' + q.tests, { onOutput: t => { out += t; }, files: q.files || {}, onInput: () => Promise.resolve(''), execLimit: 5000 });
+        const fails = out.split('\n').filter(l => l.startsWith('@@FAIL'));
+        if (!r.ok || fails.length) problems.push(`${topic}/${g.id} seed ${q.seed}: ${fails.join('; ')} ${r.error ? r.error.message : ''}`);
+      }
+      runs++;
+    }
+  }
+  document.getElementById('status').innerHTML = problems.length ? `<b class="bad">${problems.length} problem(s) in ${runs} runs</b>` : `<b class="ok">All ${runs} runs match ✓</b>`;
+  document.getElementById('out').textContent = problems.join('\n');
+})();
+</script>
+</body>
+</html>

@@ -61,10 +61,28 @@ exercises, scan the student's code with a regex for banned names and fail with a
   Lesson = **split IDE layout** (lesson on the left, editor + console pinned on the right; course tree in a drawer;
   stacks on phones). Must work at phone width with visible keyboard focus.
 
+## Unlimited practice (`#/practice`)
+- `practice/core.js` is the engine; `practice/gen-*.js` hold the generators for each syllabus section; `practice/ui.js`
+  renders a question card and marks it. Every topic lesson has a practice page (`#/practice/<lesson id>`), plus
+  `#/practice/mix` (all topics) and `#/practice/weak` (lowest accuracy, needs ≥3 answers per topic).
+- A generator is `{ id, kind, term, marks, make(R) }`. `R` is a **seeded** random helper, so a seed always gives the same
+  question. Kinds: `mcq` (every option has a `why`), `output` (type the exact output), `trace` (trace table),
+  `code` (hidden tests via `P.HARNESS` + `P.t / P.tf / P.tblock`, optional `banned` / `require`), `written`
+  (self-marked against `markscheme`). `term` is the IB command term (Identify, State, Trace, Construct, Describe,
+  Explain, Compare, Evaluate, Distinguish, Calculate, Outline).
+- Use IB-style contexts and the shared pools in `P.data`. Keep printed floats short (e.g. divide by 2, 4, 5 or 8):
+  Skulpt prints long repeating decimals with fewer digits than CPython.
+- **Verify after every change to a generator** — both must pass:
+  1. CPython: `osascript -l JavaScript tools/export.js "$PWD" 100 /tmp/q.json && python3 tools/verify.py /tmp/q.json`
+  2. Skulpt (what the site runs): `python3 tools/serve.py`, open `http://localhost:8765/tools/check.html?n=25`.
+- Stats live in localStorage under `practice[topic] = { n, c, s, m }` (answered, correct, marks scored, marks possible).
+
 ## Deployment
 - Live at **https://dharmiparsana2519-art.github.io/codecraft/** — GitHub repo `dharmiparsana2519-art/codecraft`,
   GitHub Pages serving the `main` branch root (`.nojekyll` present). It runs without Claude: static files + CDNs.
 - To update the live site: commit and push to `main` (git needs GitHub sign-in — use the gh CLI as a credential helper: `git -c credential.helper="!gh auth git-credential" push`). Pages rebuilds in about a minute.
+- Bump the `?v=N` on every local script/stylesheet URL in `index.html` when deploying, so browsers don't keep old files.
+- Local preview with caching off: `python3 tools/serve.py` (port 8765).
 
 ## Working style
 - Build in the phases in `PROMPTS.md`. After each phase, open the site in a browser and check it works before moving on.

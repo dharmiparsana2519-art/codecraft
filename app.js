@@ -67,6 +67,21 @@ log.close()
     if (P.last && !isDone(P.last) && CodeCraft.findLesson(P.last)) return CodeCraft.findLesson(P.last);
     return LESSONS.find(l => !isDone(l.id)) || LESSONS[LESSONS.length - 1];
   }
+  /* Practice stats: P.practice[topic] = { n: answered, c: correct, s: marks scored, m: marks possible } */
+  const PR = () => (P.practice = P.practice || {});
+  const topicStat = id => PR()[id] || { n: 0, c: 0, s: 0, m: 0 };
+  const hasPractice = id => !!(CodeCraft.practice && CodeCraft.practice.gens[id] && CodeCraft.practice.gens[id].length);
+  const practiceTopics = () => (CodeCraft.practice ? CodeCraft.practice.topics() : []);
+  function practiceTotals() {
+    const t = { n: 0, c: 0, s: 0, m: 0, topics: 0 };
+    Object.values(PR()).forEach(x => { t.n += x.n; t.c += x.c; t.s += x.s; t.m += x.m; if (x.n) t.topics++; });
+    return t;
+  }
+  const pc = (a, b) => (b ? Math.round(a / b * 100) : 0);
+  function weakestTopics(k) {
+    return Object.keys(PR()).filter(id => PR()[id].n >= 3 && hasPractice(id))
+      .sort((a, b) => PR()[a].c / PR()[a].n - PR()[b].c / PR()[b].n).slice(0, k);
+  }
   const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   function touchDay() {
     const k = dayKey(new Date());
@@ -125,6 +140,7 @@ log.close()
   }
   function renderSidebar(activeId) {
     const sb = $('#sidebar');
+    if (document.body.dataset.screen === 'practice') { sb.innerHTML = practiceTreeHTML(route.practice); return; }
     sb.innerHTML = treeHTML(activeId, 'sb') + `
       <div class="card side-note"><b>About CodeCraft</b>IB DP Computer Science SL, Theme B, in Python — following the Hodder textbook's order.</div>`;
     wireTree(sb);
@@ -134,7 +150,7 @@ log.close()
   const drawer = $('#drawer'), menuBtn = $('#menuBtn');
   function openDrawer() {
     const body = $('#drawerBody');
-    body.innerHTML = treeHTML(route.lessonId, 'dr');
+    body.innerHTML = document.body.dataset.screen === 'practice' ? practiceTreeHTML(route.practice) : treeHTML(route.lessonId, 'dr');
     wireTree(body);
     drawer.hidden = false; menuBtn.setAttribute('aria-expanded', 'true');
     const active = $('.les a.active', body) || $('a, button', body);
@@ -181,7 +197,7 @@ log.close()
   /* ================= HOME ================= */
   function renderHome() {
     const done = doneCount(), total = LESSONS.length, pct = Math.round(done / total * 100);
-    const next = nextLesson(), s = streak(), fresh = !P.last && done === 0;
+    const next = nextLesson(), s = streak(), fresh = !P.last && done === 0, tot = practiceTotals(), weak = weakestTopics(3);
     $('#main').innerHTML = `
       <section class="card home-hero tape">
         <div>
@@ -193,6 +209,7 @@ log.close()
                <p class="sub">You're ${pct}% through the SL programming course. Up next: ${esc(CodeCraft.lessonLabel(next))}.</p>`}
           <div class="hero-actions">
             <a class="btn primary" href="${href(next.id)}">${ICON('play')}${fresh ? 'Start' : 'Continue'}: ${esc(CodeCraft.lessonLabel(next))}</a>
+            <a class="btn" href="#/practice">${ICON('infinity')}Practice questions</a>
           </div>
         </div>
         <div class="ring" id="ring">${ring(pct, 164, 12, 70)}<div class="ring-c"><b>${pct}%</b><span>${done} of ${total} lessons</span></div></div>
@@ -200,7 +217,7 @@ log.close()
 
       <section class="stats" aria-label="Your stats">
         <div class="card stat">${ICON('book')}<span class="stat-v">${done}<small> / ${total}</small></span><span class="stat-l">Lessons complete</span></div>
-        <div class="card stat">${ICON('quiz')}<span class="stat-v">${P.quiz && P.quiz.answered ? Math.round(P.quiz.correct / P.quiz.answered * 100) + '<small>%</small>' : '–'}</span><span class="stat-l">Quiz average</span></div>
+        <div class="card stat">${ICON('quiz')}<span class="stat-v">${tot.n ? pc(tot.c, tot.n) + '<small>%</small>' : '–'}</span><span class="stat-l">Practice accuracy${tot.n ? ` · ${tot.n} answered` : ''}</span></div>
         <div class="card stat">${ICON('flame')}<span class="stat-v">${s}<small> day${s === 1 ? '' : 's'}</small></span><span class="stat-l">Current streak</span></div>
         <div class="card stat">${ICON('table')}<span class="stat-v">${P.traces || 0}</span><span class="stat-l">Trace tables solved</span></div>
       </section>
@@ -221,13 +238,14 @@ log.close()
         <aside class="side-col">
           <div class="card mini">
             <h3>${ICON('target')}Weakest topics</h3>
-            <p>Once you've answered some Check questions, the topics with your lowest quiz scores show up here.</p>
-            <div class="anno">nothing to fix yet</div>
+            ${weak.length ? `<ul class="weak">${weak.map(id => { const l = CodeCraft.findLesson(id), st = topicStat(id); return `<li><a href="#/practice/${encodeURIComponent(id)}"><div><span><code>${esc(l.ref)}</code>${esc(l.title)}</span><span>${pc(st.c, st.n)}%</span></div><div class="m-bar"><i style="width:${pc(st.c, st.n)}%"></i></div></a></li>`; }).join('')}</ul>
+               <a class="btn sm" href="#/practice/weak">${ICON('target')}Practise these</a>`
+              : `<p>Answer at least 3 practice questions on a topic and your lowest-scoring topics show up here.</p><div class="anno">nothing to fix yet</div>`}
           </div>
           <div class="card mini">
-            <h3>${ICON('bolt')}Paper 2 sprint</h3>
-            <p>10 random questions from every module, against the clock. Part of the Review module.</p>
-            <a class="btn sm" href="${href('review-2')}">${ICON('arrow')}Open</a>
+            <h3>${ICON('infinity')}Unlimited practice</h3>
+            <p>Fresh exam-style questions for every SL topic, marked instantly, with an explanation for every answer.</p>
+            <div class="hero-actions"><a class="btn sm primary" href="#/practice/mix">${ICON('bolt')}Mixed practice</a><a class="btn sm" href="#/practice">Choose a topic</a></div>
           </div>
         </aside>
       </div>`;
@@ -257,7 +275,7 @@ log.close()
       trace: ['Trace table coming soon', 'Trace the code',
         '<p>Work through a program line by line, filling in each variable\'s value in a trace table. Each row is checked as you go.</p>'],
       check: ['Quiz coming soon', 'Five-question check',
-        '<p>Every option comes with an explanation — why the right answer is right, and why each wrong one is wrong.</p>']
+        `<p>Every option comes with an explanation — why the right answer is right, and why each wrong one is wrong.</p>${hasPractice(l.id) ? `<p>Until then, <a href="#/practice/${encodeURIComponent(l.id)}">practise this topic</a> with unlimited questions.</p>` : ''}`]
     }[key];
     return `<div class="card soon"><p class="soon-k">${cards[0]}</p><h3>${cards[1]}</h3>${cards[2]}</div>`;
   }
@@ -307,6 +325,15 @@ log.close()
               <button class="btn sm mark${r.sec[s.key] ? ' done' : ''}" data-mark="${s.key}" aria-pressed="${!!r.sec[s.key]}">${r.sec[s.key] ? ICON('check') + 'Done' : 'Mark as done'}</button></header>
             ${placeholder(s.key, l)}
           </section>`).join('')}
+        ${hasPractice(id) ? (() => { const st = topicStat(id); return `
+        <section class="card practice-cta tape" aria-label="Practice">
+          <div>
+            <p class="eyebrow">${ICON('infinity')}Unlimited practice</p>
+            <h3>Practise ${esc(CodeCraft.lessonLabel(l))} — as many questions as you like</h3>
+            <p>Exam-style questions generated fresh every time, marked instantly, with an explanation for every answer.${st.n ? ` You've answered ${st.n} so far (${pc(st.c, st.n)}% correct).` : ''}</p>
+          </div>
+          <a class="btn primary" href="#/practice/${encodeURIComponent(id)}">${ICON('infinity')}Practise this topic</a>
+        </section>`; })() : ''}
         <nav class="lesson-nav" aria-label="Previous and next lesson">
           ${prev ? `<a class="card prev" href="${href(prev.id)}"><span>${ICON('left')}Previous</span><b>${esc(CodeCraft.lessonLabel(prev))}</b></a>` : ''}
           ${next ? `<a class="card next" href="${href(next.id)}"><span>Next${ICON('arrow')}</span><b>${esc(CodeCraft.lessonLabel(next))}</b></a>` : ''}
@@ -364,6 +391,121 @@ log.close()
     $$('.step').forEach(s => stepObserver.observe(s));
   }
 
+  /* ================= PRACTICE ================= */
+  const pHref = id => '#/practice/' + encodeURIComponent(id);
+  function practiceTreeHTML(activeId) {
+    const tot = practiceTotals(), mods = COURSE.modules.map(m => [m, m.lessons.filter(l => hasPractice(l.id))]).filter(x => x[1].length);
+    return `
+      <div class="card side-prog"><div class="mini-ring">${ring(pc(tot.c, tot.n), 46, 4, 19)}<em>${tot.n ? pc(tot.c, tot.n) + '%' : '–'}</em></div>
+        <div><b>Practice</b><span>${tot.n} answered · ${tot.topics} topic${tot.topics === 1 ? '' : 's'}</span></div></div>
+      <nav class="ptree" aria-label="Practice topics">
+        <a class="pt-link pt-mix${activeId === 'mix' ? ' active' : ''}" href="${pHref('mix')}">${ICON('bolt')}Mixed — all topics</a>
+        <a class="pt-link pt-mix${activeId === 'weak' ? ' active' : ''}" href="${pHref('weak')}">${ICON('target')}My weakest topics</a>
+        ${mods.map(([m, ls]) => `<div class="side-label">${m.num} · ${esc(m.title)}</div>${ls.map(l => { const st = topicStat(l.id); return `<a class="pt-link${l.id === activeId ? ' active' : ''}" href="${pHref(l.id)}"${l.id === activeId ? ' aria-current="page"' : ''}><span>${esc(CodeCraft.lessonLabel(l))}</span>${st.n ? `<em class="pt-acc ${pc(st.c, st.n) >= 70 ? 'good' : pc(st.c, st.n) >= 40 ? 'mid' : 'low'}">${pc(st.c, st.n)}%</em>` : ''}</a>`; }).join('')}`).join('')}
+      </nav>`;
+  }
+
+  function renderPracticeHub() {
+    const tot = practiceTotals(), mods = COURSE.modules.map(m => [m, m.lessons.filter(l => hasPractice(l.id))]).filter(x => x[1].length);
+    const nGens = practiceTopics().reduce((a, id) => a + CodeCraft.practice.gens[id].length, 0);
+    $('#main').innerHTML = `
+      <section class="card home-hero tape">
+        <div>
+          <p class="eyebrow">${ICON('infinity')}Unlimited practice · ${practiceTopics().length} topics</p>
+          <h1 class="home-title">Practise until it <em>sticks.</em></h1>
+          <p class="sub">Every question is generated fresh, so you never run out. Each topic mixes the IB's command terms — identify, trace, construct, describe, compare, evaluate — and every answer comes with an explanation.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="${pHref('mix')}">${ICON('bolt')}Mixed practice</a>
+            <a class="btn" href="${pHref('weak')}">${ICON('target')}My weakest topics</a>
+          </div>
+        </div>
+        <div class="ring" id="ring">${ring(pc(tot.c, tot.n), 164, 12, 70)}<div class="ring-c"><b>${tot.n ? pc(tot.c, tot.n) + '%' : '–'}</b><span>${tot.n} answered</span></div></div>
+      </section>
+      <section class="stats" aria-label="Practice stats">
+        <div class="card stat">${ICON('quiz')}<span class="stat-v">${tot.n}</span><span class="stat-l">Questions answered</span></div>
+        <div class="card stat">${ICON('check')}<span class="stat-v">${tot.c}</span><span class="stat-l">Fully correct</span></div>
+        <div class="card stat">${ICON('target')}<span class="stat-v">${tot.s}<small> / ${tot.m}</small></span><span class="stat-l">Marks earned</span></div>
+        <div class="card stat">${ICON('table')}<span class="stat-v">${P.traces || 0}</span><span class="stat-l">Trace tables solved</span></div>
+      </section>
+      ${mods.map(([m, ls]) => `
+        <section class="pmod" aria-labelledby="pm-${m.id}">
+          <h2 class="h2" id="pm-${m.id}">${esc(m.title)} <span>${esc(m.ref)}</span></h2>
+          <ol class="mods">${ls.map(l => { const st = topicStat(l.id), p = pc(st.c, st.n), g = CodeCraft.practice.gens[l.id];
+            const kinds = [...new Set(g.map(x => ({ mcq: 'multiple choice', output: 'output', trace: 'trace tables', code: 'coding', written: 'written' })[x.kind]))];
+            return `<li><a class="card mcard pcard ${st.n ? (p >= 70 ? 'done' : 'cur') : ''}" href="${pHref(l.id)}">
+              <div class="m-top"><span class="m-code">${esc(l.ref)}</span><span class="m-state">${st.n ? `${p}% · ${st.n}` : 'New'}</span></div>
+              <div class="m-title">${esc(l.title)}</div>
+              <div class="m-bar"><i style="width:${p}%"></i></div>
+              <div class="m-meta">${g.length} question types: ${kinds.join(', ')}</div></a></li>`; }).join('')}</ol>
+        </section>`).join('')}
+      <p class="pnote">${nGens} question generators across ${practiceTopics().length} topics. Questions are built from each subtopic's syllabus statement in the IB Computer Science guide (first assessment 2027), and every code answer has been checked by running it in Python.</p>`;
+    const v = $('#ring .val');
+    if (v) { const c = +v.dataset.c; v.style.transition = 'none'; v.style.strokeDashoffset = c; v.getBoundingClientRect(); v.style.transition = ''; v.style.strokeDashoffset = c * (1 - (+v.dataset.pct) / 100); }
+  }
+
+  let current = null, session = null;
+  function renderPracticeTopic(id) {
+    const all = practiceTopics();
+    const single = hasPractice(id), l = single ? CodeCraft.findLesson(id) : null;
+    if (!single && id !== 'mix' && id !== 'weak') { location.hash = '#/practice'; return; }
+    session = { n: 0, c: 0, run: 0 };
+    let pool = single ? [id] : id === 'weak' ? weakestTopics(5) : all;
+    const weakEmpty = id === 'weak' && !pool.length;
+    if (weakEmpty) pool = all;
+    const title = single ? l.title : id === 'mix' ? 'Mixed practice' : 'My weakest topics';
+    $('#main').innerHTML = `
+      <div class="pr-wrap">
+        <header class="pr-head">
+          <div class="tags">
+            <a class="tag" href="#/practice">${ICON('left')}All topics</a>
+            ${single ? `<span class="tag tag-ref">${esc(l.ref)}</span>` : ''}
+            <span class="tag">${ICON('infinity')}Unlimited</span>
+          </div>
+          <h1 class="lesson-title"><em>${esc(title)}</em></h1>
+          <p class="lede">${single ? esc(l.blurb) : id === 'mix' ? 'Questions from every SL topic, one after another.' : weakEmpty ? 'Answer at least 3 questions on a topic first — until then, this mixes every topic.' : 'Questions from the topics where your accuracy is lowest: ' + pool.map(t => esc(CodeCraft.findLesson(t).ref)).join(', ') + '.'}</p>
+          <div class="pr-session" id="prSession"></div>
+        </header>
+        <div id="qHost"></div>
+        <div class="pr-next">
+          <button class="btn primary" id="nextQ">${ICON('arrow')}<span>Skip</span></button>
+          ${single ? `<a class="btn" href="${href(id)}">${ICON('book')}Back to the lesson</a>` : ''}
+        </div>
+      </div>`;
+    const sessionChips = () => {
+      const st = single ? topicStat(id) : practiceTotals();
+      $('#prSession').innerHTML = `<span class="chip-stat">This session: ${session.c} / ${session.n} correct</span>${session.run > 1 ? `<span class="chip-stat">${ICON('flame')}${session.run} in a row</span>` : ''}<span class="chip-stat">${single ? 'This topic' : 'Overall'}: ${st.n ? `${pc(st.c, st.n)}% of ${st.n} answered` : 'no answers yet'}</span>`;
+    };
+    const nextBtn = $('#nextQ');
+    const next = () => {
+      if (current) current.destroy();
+      const topic = pool[Math.floor(Math.random() * pool.length)];
+      const q = CodeCraft.practice.next(topic);
+      q.topicRef = CodeCraft.findLesson(topic).ref;
+      nextBtn.querySelector('span').textContent = 'Skip';
+      nextBtn.classList.remove('primary');
+      current = CodeCraft.practiceUI.render($('#qHost'), q, res => {
+        const s = PR()[q.topic] = PR()[q.topic] || { n: 0, c: 0, s: 0, m: 0 };
+        s.n++; s.s += res.score; s.m += res.max; if (res.ok) s.c++;
+        if (res.ok && q.kind === 'trace') P.traces = (P.traces || 0) + 1;
+        session.n++; if (res.ok) { session.c++; session.run++; } else session.run = 0;
+        touchDay(); save(); renderChips(); sessionChips();
+        renderSidebar(id);
+        nextBtn.querySelector('span').textContent = 'Next question';
+        nextBtn.classList.add('primary');
+        if (res.ok && session.run > 0 && session.run % 5 === 0) { confetti(nextBtn); toast(`${session.run} in a row — brilliant!`); }
+        setTimeout(() => nextBtn.focus({ preventScroll: true }), 50);
+      });
+      window.scrollTo({ top: 0 });
+    };
+    nextBtn.addEventListener('click', next);
+    sessionChips();
+    next();
+  }
+  addEventListener('keydown', e => {
+    if (document.body.dataset.screen !== 'practice' || e.ctrlKey || e.metaKey || e.altKey || (e.target.closest && e.target.closest('input, textarea, .CodeMirror, select'))) return;
+    if ((e.key === 'n' || e.key === 'N') && $('#nextQ')) { e.preventDefault(); $('#nextQ').click(); }
+  });
+
   /* Phones: the editor sits below the lesson, so a floating button jumps between the two. */
   const fab = $('#fabEditor');
   let dockInView = false;
@@ -378,11 +520,24 @@ log.close()
   });
 
   /* ================= ROUTER ================= */
-  const route = { lessonId: null };
+  const route = { lessonId: null, practice: null };
   function go(first) {
-    const m = location.hash.match(/^#\/lesson\/(.+)$/);
+    const m = location.hash.match(/^#\/lesson\/(.+)$/), pm = location.hash.match(/^#\/practice(?:\/(.+))?$/);
     closeDrawer();
-    if (m) {
+    if (current) { current.destroy(); current = null; }
+    route.practice = null;
+    if (pm) {
+      route.lessonId = null;
+      if (playground) { playground.destroy(); playground = null; }
+      if (stepObserver) stepObserver.disconnect();
+      document.body.dataset.screen = 'practice';
+      $('#crumbs').innerHTML = '';
+      const id = pm[1] ? decodeURIComponent(pm[1]) : null;
+      route.practice = id || 'hub';
+      if (id) renderPracticeTopic(id); else renderPracticeHub();
+      const l = id && CodeCraft.findLesson(id);
+      document.title = (l ? 'Practice: ' + CodeCraft.lessonLabel(l) : 'Practice') + ' · CodeCraft';
+    } else if (m) {
       const id = decodeURIComponent(m[1]);
       route.lessonId = id;
       document.body.dataset.screen = 'lesson';

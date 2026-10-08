@@ -211,6 +211,7 @@ window.CodeCraft = window.CodeCraft || {};
       showView('code');
       clearConsole(); clearErrLine();
       setRunning(true); setStatus('run', 'Running…');
+      await new Promise(r => setTimeout(r, 30)); // let "Running…" appear before Python takes over the page
       const before = Object.assign({}, files);
       const res = await CodeCraft.runner.run(getCode(), { onOutput: write, onInput: askInput, files });
       setRunning(false);

@@ -32,11 +32,18 @@
 <script src="../content/notes/B2.1.1.js?fresh"></script>
 <script src="../content/notes/B2.1.2.js?fresh"></script>
 <script src="../content/notes/B2.1.3.js?fresh"></script>
+<script src="../content/notes/B2.1.4.js?fresh"></script>
+<script src="../content/notes/B2.2.1.js?fresh"></script>
+<script src="../content/notes/B2.2.2.js?fresh"></script>
 <script src="../content/notes/B2.2.3.js?fresh"></script>
+<script src="../content/notes/B2.2.4.js?fresh"></script>
 <script src="../content/notes/B2.3.1.js?fresh"></script>
 <script src="../content/notes/B2.3.2.js?fresh"></script>
 <script src="../content/notes/B2.3.3.js?fresh"></script>
 <script src="../content/notes/B2.3.4.js?fresh"></script>
+<script src="../content/notes/B2.4.1.js?fresh"></script>
+<script src="../content/notes/B2.4.2.js?fresh"></script>
+<script src="../content/notes/B2.4.3.js?fresh"></script>
 <script>
 (async () => {
   const P = CodeCraft.practice, n = +(new URLSearchParams(location.search).get('n') || 10);
@@ -116,6 +123,9 @@
       counts.traces++;
     }
   }
+  // Engine: a function that runs for a while must still return its value (Skulpt loses it if the runner time-slices).
+  { let out = ''; const r = await CodeCraft.runner.run('def f():\n    t = 0\n    for i in range(2000000):\n        t = t + i\n    return t\nx = f()\nprint(x)', { onOutput: t => { out += t; }, execLimit: 10000 });
+    if (!r.ok || out.trim() !== '1999999000000') problems.push(`engine: a long-running function lost its result (${r.error ? r.error.message : out.trim()})`); counts.runs++; }
   // Floats: every result of tools/floatfuzz.py must print exactly as real Python 3 printed it (tools/floatfuzz.out).
   const want = (await (await fetch('floatfuzz.out')).text()).trim().split('\n');
   let fout = '';

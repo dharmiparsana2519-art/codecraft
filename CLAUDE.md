@@ -60,7 +60,9 @@ The learner must see *how to think*, not just the answer. This applies to everyt
 - Works: f-strings, slicing, string methods, try/except/finally, `except ValueError as e`, classes, `__init__`,
   `__str__`, `@staticmethod`, name-mangled `self.__name` (raises AttributeError from outside), 2D lists,
   `global`, `input()`, `list.pop(0)`, `range` with step.
-- Configure: `Sk.configure({ output, read, inputfun, inputfunTakesPrompt: true, __future__: Sk.python3, execLimit: 3000, yieldLimit: 100 })`
+- Configure: `Sk.configure({ output, read, inputfun, inputfunTakesPrompt: true, __future__: Sk.python3, execLimit: 3000, yieldLimit: null })`.
+  **Never set a `yieldLimit`:** Skulpt 1.2.0 loses a function's work if it yields mid-call (a function running longer
+  than the yield interval returns garbage, and `x = f()` leaves `x` undefined). `tools/check.html` tests for this.
   and run with `Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true))`.
   `execLimit` turns infinite loops into a `TimeLimitError` instead of freezing the tab — show a friendly message
   that links to B2.3.1 ("ways to avoid infinite loops").

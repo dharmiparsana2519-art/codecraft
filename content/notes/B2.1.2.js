@@ -182,7 +182,7 @@ print("Backwards:", backwards)
 print(letter, "appears", count, "times")
 print("Palindrome?", word == backwards)`, out: `Word: Level\nLetter to count: e\nBackwards: leveL\ne appears 2 times\nPalindrome? False`,
           why: `"L" and "l" are different characters, so "Level" and "leveL" aren't equal. Convert both to the same case before comparing.` },
-        { title: 'Comparing with the word "letter"', bad: 7, code: `word = input("Word: ").lower()
+        { title: 'Comparing with the word "letter"', bad: 5, code: `word = input("Word: ").lower()
 letter = input("Letter to count: ").lower()
 count = 0
 for ch in word:
@@ -190,7 +190,7 @@ for ch in word:
         count = count + 1
 print(letter, "appears", count, "times")`, out: `Word: Level\nLetter to count: e\ne appears 0 times`,
           why: `With quotes, <code>"letter"</code> is a string literal, not the variable. One character can never equal a six-character string, so the count stays 0.` },
-        { title: 'Resetting the result inside the loop', bad: 6, code: `word = input("Word: ").lower()
+        { title: 'Resetting the result inside the loop', bad: 4, code: `word = input("Word: ").lower()
 letter = input("Letter to count: ").lower()
 for ch in word:
     backwards = ""

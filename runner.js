@@ -139,7 +139,10 @@ window.CodeCraft = window.CodeCraft || {};
       inputfunTakesPrompt: true,
       __future__: Sk.python3,
       execLimit: opts.execLimit || 3000,
-      yieldLimit: 100
+      // No time-slicing (yieldLimit): Skulpt 1.2.0 loses a function's work when it yields inside a call — a function
+      // running longer than the yield interval comes back with the wrong value or skips the line that called it
+      // (e.g. x = f() leaves x undefined). execLimit still stops infinite loops with a TimeLimitError.
+      yieldLimit: null
     });
 
     const t0 = performance.now();

@@ -83,7 +83,7 @@ print("Saved mark:", m)`, error: 'ValueError', errorText: "invalid literal for i
 m = get_mark()
 print("Saved mark:", m)`, out: `Mark (0-100): seventy\nWhole numbers only.\nSaved mark: None`,
           why: `The error is caught, but the function then ends without returning anything, so the program carries on with <code>None</code>. A loop keeps asking until the input is valid.` },
-        { title: 'Forgetting the range check', bad: 4, inputs: ['150'], code: `def get_mark():
+        { title: 'Forgetting the range check', bad: 5, inputs: ['150'], code: `def get_mark():
     while True:
         try:
             mark = int(input("Mark (0-100): "))
@@ -184,7 +184,7 @@ try:
 except:
     print("Something went wrong")`, out: `Something went wrong`,
           why: `A bare <code>except</code> catches every error, so the program doesn't crash — but the message doesn't say what went wrong (here, an empty file). Name each exception you expect.` },
-        { title: 'Dividing outside the try', bad: 10, files: { 'scores.txt': '' }, code: `total = 0
+        { title: 'Dividing outside the try', bad: 11, files: { 'scores.txt': '' }, code: `total = 0
 count = 0
 try:
     f = open("scores.txt", "r")

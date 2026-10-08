@@ -7,7 +7,7 @@
 
   /* ================= B2.5.1  Text files ================= */
   P.add('B2.5.1', [
-    { id: 'file-read', kind: 'output', term: 'Trace', marks: 3, make(R) {
+    { id: 'file-read', kind: 'output', term: 'Determine', marks: 3, make(R) {
       const rows = scoresFile(R, R.int(4, 5)), files = { 'scores.txt': csv(rows) }, v = R.int(0, 3);
       if (v === 0) {
         const pm = R.pick([50, 60, 70].filter(p => rows.some(r => r[1] >= p))) || 35, keep = rows.filter(r => r[1] >= pm);
@@ -34,7 +34,7 @@
         code: 'total = 0\ncount = 0\nwith open("scores.txt", "r") as f:\n    for line in f:\n        parts = line.strip().split(",")\n        total = total + int(parts[1])\n        count = count + 1\nprint(count, total)\nprint(total / count)',
         answer: `${rows.length} ${tot}\n${py.f(tot / rows.length)}`, explain: `<p>parts[1] is the score on each line. Adding them gives ${rows.map(r => r[1]).join(' + ')} = ${tot} from ${rows.length} lines; / gives the mean as a float.</p>` };
     } },
-    { id: 'file-modes', kind: 'output', term: 'Trace', marks: 3, make(R) {
+    { id: 'file-modes', kind: 'output', term: 'Determine', marks: 3, make(R) {
       const names = R.sample(P.data.names, 8), steps = [], lines = [];
       let content = [], ptr = 0;
       const n = R.int(3, 4);
@@ -209,7 +209,7 @@
 
   /* ================= B3.1.3  Static vs non-static ================= */
   P.add('B3.1.3', [
-    { id: 'static-count', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'static-count', kind: 'output', term: 'State', marks: 2, make(R) {
       const names = R.sample(P.data.names, 5), n1 = R.int(2, 3), extra = R.int(1, 2), school = R.pick(['Hillside', 'Riverside', 'Lakeview']);
       const lines = names.slice(0, n1).map((n, i) => `s${i + 1} = Student("${n}")`);
       lines.push('print(Student.count)', `t = s1`);
@@ -257,7 +257,7 @@
 
   /* ================= B3.1.4  Classes & constructors ================= */
   P.add('B3.1.4', [
-    { id: 'cls-output', kind: 'output', term: 'Trace', marks: 3, make(R) {
+    { id: 'cls-output', kind: 'output', term: 'Determine', marks: 3, make(R) {
       if (R.chance(0.5)) {
         const owner = R.pick(P.data.names), bal = R.int(4, 12), top = R.int(2, 8), p1 = R.int(3, 9), p2 = R.int(5, 15);
         let b = bal + top; const out = [];
@@ -315,7 +315,7 @@
           : [opt('AttributeError', true, '__balance is private: Python hides it from code outside the class, so it must be read through get_balance().'), opt(String(bal), false, 'The double underscore makes the attribute private, so it can\'t be read directly from outside.'), opt('None', false, 'Python raises an error rather than returning None.'), opt(owner, false, 'That is the public owner attribute.')],
         check: { code: `try:\n${code.split('\n').map(l => '    ' + l).join('\n')}\nexcept AttributeError:\n    print("AttributeError")`, expect: via ? String(bal) : 'AttributeError' } };
     } },
-    { id: 'enc-setter', kind: 'output', term: 'Trace', marks: 3, make(R) {
+    { id: 'enc-setter', kind: 'output', term: 'Determine', marks: 3, make(R) {
       const name = R.pick(P.data.names), lo = 0, hi = 100, vals = R.shuffle([R.int(40, 99), R.pick([120, 105, 150]), R.pick([-5, -1]), R.int(20, 90)]).slice(0, R.int(3, 4));
       let score = 0; const out = vals.map(v => { const ok = v >= lo && v <= hi; if (ok) score = v; return py.b(ok); });
       out.push(String(score));

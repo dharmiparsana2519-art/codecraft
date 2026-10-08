@@ -50,7 +50,7 @@
           ...others.map(t => opt(t, false, (special && special[t]) || `A ${t} holds ${TYPES[t]} — that doesn't fit, because ${reason}.`))]
       };
     } },
-    { id: 'dt-operators', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'dt-operators', kind: 'output', term: 'State', marks: 2, make(R) {
       // b is 2, 4, 5 or 8 so a / b is a short decimal (long repeating decimals print differently in some Python engines)
       let a, b; do { a = R.int(11, 40); b = R.pick([2, 4, 5, 8]); } while (a % b === 0);
       const ex = R.sample(ARITH, 3);
@@ -139,7 +139,7 @@
         explain: P.list(steps) + '<p>Only the variable on the left of <code>=</code> changes on each line; the others keep their values.</p>'
       };
     } },
-    { id: 'dt-scope', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'dt-scope', kind: 'output', term: 'State', marks: 2, make(R) {
       const A = R.int(5, 20), B = R.int(2, 9), Cc = R.int(21, 40), v = R.int(0, 2);
       if (v === 0) return {
         prompt: 'What does this program print?',
@@ -208,7 +208,7 @@
   /* ================= B2.1.2  Substrings ================= */
   const STRS = ['COMPUTER', 'LIBRARY', 'CANTEEN', 'ALGORITHM', 'KEYBOARD', 'NETWORK', 'VARIABLE', 'IB2027-CS', 'STU-4821', 'Library', 'Python', 'Canteen Queue', 'Sports Day'];
   P.add('B2.1.2', [
-    { id: 'str-ops', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'str-ops', kind: 'output', term: 'State', marks: 2, make(R) {
       const s = R.pick(STRS), n = s.length;
       const OPS = [
         () => { const i = R.int(0, n - 1); return [`s[${i}]`, s[i], `index ${i} is the ${i + 1}${['st', 'nd', 'rd'][i] || 'th'} character (indexes start at 0)`]; },
@@ -271,7 +271,7 @@
         check: { code: `name = "${name}"\nname = "${L}" + name[1:]\nprint(name)`, expect: fixed }
       };
     } },
-    { id: 'str-loop', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'str-loop', kind: 'output', term: 'State', marks: 2, make(R) {
       const v = R.int(0, 3), w = R.pick(P.data.words);
       if (v === 0) {
         const r = [...w].filter(c => 'AEIOU'.includes(c)).join('');
@@ -358,7 +358,7 @@
     NameError: 'a variable or function name hasn\'t been defined'
   };
   P.add('B2.1.3', [
-    { id: 'ex-flow', kind: 'output', term: 'Trace', marks: 3, make(R) {
+    { id: 'ex-flow', kind: 'output', term: 'Determine', marks: 3, make(R) {
       if (R.chance(0.65)) {
         const tot = R.pick([60, 72, 84, 96, 120]), good = R.pick([2, 3, 4, 6]);
         const text = R.pick([String(good), String(good), '0', 'abc', '3.5', 'six']);
@@ -564,7 +564,7 @@
         options: Object.keys(T).map(k => opt(k, k === key, k === key ? `Yes — this is ${T[k][0]}.` : `${k} means ${T[k][0]}.`))
       };
     } },
-    { id: 'dbg-print', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'dbg-print', kind: 'output', term: 'State', marks: 2, make(R) {
       const a = R.int(1, 3), b = a + R.int(3, 4), k = R.int(2, 5);
       let total = 0; const out = [];
       for (let i = a; i < b; i++) { total += i * k; out.push(`i = ${i} total = ${total}`); }

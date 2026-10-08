@@ -12,7 +12,7 @@
 </head>
 <body>
 <h1>Practice question check (Skulpt)</h1>
-<p>Runs every "predict the output" program and every model solution for "write code" questions in the same Python engine the site uses, and compares the results. Open via a local server: <code>python3 tools/serve.py</code>, then <code>http://localhost:8765/tools/check.html?n=20</code>.</p>
+<p>Runs every "predict the output" program and every model solution for "write code" questions in the same Python engine the site uses, and compares the results. It also checks ~6,000 float results against real Python (tools/floatfuzz.py / .out). Open via a local server: <code>python3 tools/serve.py</code>, then <code>http://localhost:8765/tools/check.html?n=20</code>.</p>
 <p id="status">Running…</p>
 <pre id="out"></pre>
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
@@ -48,6 +48,12 @@
       runs++;
     }
   }
+  // Floats: every result of tools/floatfuzz.py must print exactly as real Python 3 printed it (tools/floatfuzz.out).
+  const want = (await (await fetch('floatfuzz.out')).text()).trim().split('\n');
+  let fout = '';
+  await CodeCraft.runner.run(await (await fetch('floatfuzz.py')).text(), { onOutput: t => { fout += t; }, execLimit: 20000 });
+  fout.trim().split('\n').forEach((line, i) => { if (line !== want[i]) problems.push(`floats line ${i + 1}: Python ${want[i]} | site ${line}`); });
+  runs++;
   document.getElementById('status').innerHTML = problems.length ? `<b class="bad">${problems.length} problem(s) in ${runs} runs</b>` : `<b class="ok">All ${runs} runs match ✓</b>`;
   document.getElementById('out').textContent = problems.join('\n');
 })();

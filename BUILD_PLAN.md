@@ -47,7 +47,6 @@ Each lesson page has the same parts:
 | B2.4.1 | Big O | O(1), O(log n), O(n), O(n²); time vs space complexity; counting operations; choosing algorithms for scalability. Interactive chart of growth rates. |
 | B2.4.2 | Linear & binary search | Both implemented and traced; binary search needs sorted data; efficiency comparison; phone-book example from the guide (search by name in sorted list vs by number). **Step-through visualizer** showing low/mid/high. |
 | B2.4.3 | Bubble & selection sort | Both implemented and traced pass by pass; time O(n²), space O(1); early-exit bubble sort; pros/cons on nearly-sorted vs random data. **Sorting visualizer** with step, play, comparison counter. "No built-ins" always on here. |
-| (HL) | Recursion | "Beyond SL" box only. |
 
 ## Module 7 — B2.5 File processing (p.378)
 | B2.5.1 | Text files | `open()` modes `r`, `w`, `a`; `read()`, `readline()`, `readlines()`, iterating lines, `write()`, `close()`, `with`. Parse CSV-style lines with `split(",")`. Handle a missing file with try/except. Exercises use pre-loaded virtual files (e.g. `scores.txt`, `library.txt`). |

@@ -88,7 +88,6 @@ CodeCraft.course = {
     },
     {
       id: 'm6', num: 6, ref: 'B2.4', title: 'Algorithms', page: 358,
-      beyond: 'Recursion is HL only (B2.4.4–B2.4.5). It appears here as an optional "Beyond SL" note.',
       lessons: [
         { id: 'B2.4.1', ref: 'B2.4.1', title: 'Big O',
           blurb: 'Measure how an algorithm slows down as the data grows.',

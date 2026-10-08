@@ -1,0 +1,9 @@
+# GitHub Pages settings. The website is just the plain files in this folder (no Jekyll features are used);
+# this list keeps development files off the live site. They stay in the GitHub repository.
+exclude:
+  - tools/
+  - design/
+  - CLAUDE.md
+  - BUILD_PLAN.md
+  - PROMPTS.md
+  - README.md

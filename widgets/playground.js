@@ -190,7 +190,11 @@ window.CodeCraft = window.CodeCraft || {};
         let link = '';
         if (f.link && CodeCraft.findLesson) {
           const l = CodeCraft.findLesson(f.link);
-          if (l) link = ` <a class="friendly-link" href="#/lesson/${encodeURIComponent(l.id)}">Revise ${esc(CodeCraft.lessonLabel(l))} →</a>`;
+          const notes = CodeCraft.lessons && CodeCraft.lessons[f.link] && CodeCraft.lessons[f.link].learn;
+          const practice = CodeCraft.practice && CodeCraft.practice.gens[f.link] && CodeCraft.practice.gens[f.link].length;
+          // Until a lesson has notes, send the student to its practice questions (which have explanations) instead.
+          if (l && notes) link = ` <a class="friendly-link" href="#/lesson/${encodeURIComponent(l.id)}">Revise ${esc(CodeCraft.lessonLabel(l))} →</a>`;
+          else if (l && practice) link = ` <a class="friendly-link" href="#/practice/${encodeURIComponent(l.id)}">Practise ${esc(CodeCraft.lessonLabel(l))} →</a>`;
         }
         con.insertAdjacentHTML('beforeend', `<div class="friendly"><b>What does this mean?</b> ${f.text}${link}</div>`);
       }

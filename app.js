@@ -50,11 +50,14 @@ log.close()
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) { /* private mode: progress lasts this visit only */ } }
   const rec = id => (P.lessons[id] = P.lessons[id] || { sec: {} });
-  const isDone = id => { const r = P.lessons[id]; return !!r && SECTIONS.every(s => r.sec && r.sec[s.key]); };
+  // A section counts only once it has real content; "coming soon" sections can't be ticked or counted.
+  const hasSection = (id, key) => !!(CodeCraft.lessons[id] && CodeCraft.lessons[id][key]);
+  const liveSections = id => SECTIONS.filter(s => hasSection(id, s.key));
+  const isDone = id => { const r = P.lessons[id], live = liveSections(id); return !!r && live.length > 0 && live.every(s => r.sec && r.sec[s.key]); };
   function status(id) {
     if (isDone(id)) return 'done';
     const r = P.lessons[id];
-    return r && (r.seen || Object.keys(r.sec || {}).some(k => r.sec[k])) ? 'started' : 'new';
+    return r && (r.seen || liveSections(id).some(s => r.sec && r.sec[s.key])) ? 'started' : 'new';
   }
   const doneCount = () => LESSONS.filter(l => isDone(l.id)).length;
   const modDone = m => m.lessons.filter(l => isDone(l.id)).length;
@@ -210,16 +213,21 @@ log.close()
   drawer.addEventListener('click', e => { if (e.target.closest('[data-close]') || e.target.closest('a')) closeDrawer(); });
   addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
-  /* Light / dark */
+  /* Light / dark: follows the device setting until the toggle is used. Choosing the device's own mode again
+     goes back to following the device. */
+  const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+  const deviceMode = () => (darkQuery.matches ? 'dark' : 'light');
   function setMode(mode) {
     document.documentElement.dataset.mode = mode;
     $('#modeBtn').setAttribute('aria-label', mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
   }
   $('#modeBtn').addEventListener('click', () => {
-    P.mode = document.documentElement.dataset.mode === 'dark' ? 'light' : 'dark';
-    setMode(P.mode); save();
+    const next = document.documentElement.dataset.mode === 'dark' ? 'light' : 'dark';
+    P.mode = next === deviceMode() ? null : next;
+    setMode(next); save();
   });
-  setMode(P.mode || 'light');
+  darkQuery.addEventListener('change', () => { if (!P.mode) setMode(deviceMode()); });
+  setMode(P.mode || deviceMode());
 
   /* Toast + confetti */
   let toastTimer;
@@ -307,14 +315,12 @@ log.close()
   function placeholder(key, l) {
     const nob = /No built-ins/i.test(l.must.join(' ')) || ['m5', 'm6'].includes(l.module.id);
     if (key === 'learn') {
-      const beyond = l.module.beyond && l.module.lessons[l.module.lessons.length - 1].id === l.id
-        ? `<div class="card beyond"><b>Beyond SL.</b> ${esc(l.module.beyond)}</div>` : '';
       return `<div class="card prose">
           <p class="soon-k">Notes coming soon</p>
           <h3>In this lesson</h3>
           <ul class="must">${l.must.map(m => `<li>${esc(m)}</li>`).join('')}</ul>
           <div class="anno">meanwhile, try the editor</div>
-        </div>${beyond}`;
+        </div>`;
     }
     const cards = {
       try: ['Exercises coming soon', 'Auto-graded exercises',
@@ -330,7 +336,7 @@ log.close()
   function stepsNav(l) {
     const r = P.lessons[l.id] || { sec: {} };
     return `<nav class="steps" aria-label="Lesson sections">${SECTIONS.map((s, i) => {
-      const d = r.sec && r.sec[s.key];
+      const d = hasSection(l.id, s.key) && r.sec && r.sec[s.key];
       return `<button class="st${i === 0 ? ' on' : ''}${d ? ' done' : ''}" data-go="${s.key}"><span class="st-n">${d ? ICON('check') : i + 1}</span><span class="st-l">${s.title}</span></button>`;
     }).join('')}</nav>`;
   }
@@ -369,8 +375,8 @@ log.close()
         ${SECTIONS.map((s, i) => `
           <section class="step" id="step-${s.key}" data-step="${s.key}" aria-labelledby="h-${s.key}">
             <header class="sec-head"><span class="sec-k">${i + 1}</span><h2 id="h-${s.key}">${s.title}</h2>
-              <button class="btn sm mark${r.sec[s.key] ? ' done' : ''}" data-mark="${s.key}" aria-pressed="${!!r.sec[s.key]}">${r.sec[s.key] ? ICON('check') + 'Done' : 'Mark as done'}</button></header>
-            ${placeholder(s.key, l)}
+              ${hasSection(id, s.key) ? `<button class="btn sm mark${r.sec[s.key] ? ' done' : ''}" data-mark="${s.key}" aria-pressed="${!!r.sec[s.key]}">${r.sec[s.key] ? ICON('check') + 'Done' : 'Mark as done'}</button>` : ''}</header>
+            ${hasSection(id, s.key) ? `<div class="card prose">${content[s.key]}</div>` : placeholder(s.key, l)}
           </section>`).join('')}
         ${hasPractice(id) ? (() => { const st = topicStat(id); return `
         <section class="card practice-cta tape" aria-label="Practice">

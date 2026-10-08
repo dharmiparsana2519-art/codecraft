@@ -6,7 +6,7 @@
 
   /* ================= B2.3.1  Sequence ================= */
   P.add('B2.3.1', [
-    { id: 'seq-swap-trace', kind: 'output', term: 'Trace', marks: 1, make(R) {
+    { id: 'seq-swap-trace', kind: 'output', term: 'State', marks: 1, make(R) {
       const [x, y] = R.distinct(2, 2, 40), [p, q] = R.pick([['a', 'b'], ['first', 'second'], ['left', 'right']]);
       return {
         prompt: 'This code is meant to swap the two values. What does it actually print?',
@@ -94,7 +94,7 @@
         options: Object.keys(CATS).map(c => opt(c, c === cat, c === cat ? `Yes — this is ${CATS[c][0]}.` : `${c} means ${CATS[c][0]}.`))
       };
     } },
-    { id: 'seq-output', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'seq-output', kind: 'output', term: 'State', marks: 2, make(R) {
       const A = R.int(6, 20) * 10, B = R.int(2, 9) * 5, before = R.chance(0.5);
       const fee = before ? Math.floor(A / 10) : Math.floor((A - B) / 10), end = A - B - fee;
       const lines = before ? ['fee = balance // 10', `balance = balance - ${B}`] : [`balance = balance - ${B}`, 'fee = balance // 10'];
@@ -111,7 +111,7 @@
   const bounds = R => { const b4 = R.int(35, 45), b5 = b4 + R.int(8, 12), b6 = b5 + R.int(8, 12), b7 = b6 + R.int(8, 12); return [b7, b6, b5, b4]; };
   const gradeOf = (s, b) => (s >= b[0] ? 7 : s >= b[1] ? 6 : s >= b[2] ? 5 : s >= b[3] ? 4 : 3);
   P.add('B2.3.2', [
-    { id: 'sel-grade', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'sel-grade', kind: 'output', term: 'State', marks: 2, make(R) {
       const b = bounds(R), score = R.chance(0.4) ? R.pick(b) : R.int(b[3] - 8, b[0] + 10), g = gradeOf(score, b);
       const which = [0, 1, 2, 3].find(i => score >= b[i]);
       return {
@@ -135,7 +135,7 @@
         check: { code: `score = ${hi}\nif score >= ${b[2]}:\n    grade = 4\nelif score >= ${b[1]}:\n    grade = 5\nelse:\n    grade = 3\nprint(grade != ${intended(hi)})`, expect: 'True' }
       };
     } },
-    { id: 'sel-bool', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'sel-bool', kind: 'output', term: 'State', marks: 2, make(R) {
       const a = R.int(1, 20), b = R.int(1, 20), flag = R.chance(0.5), X = R.int(5, 15), Y = R.int(5, 15);
       const E = R.sample([
         [`a > ${X} and b < ${Y}`, (a > X) && (b < Y), `${py.b(a > X)} and ${py.b(b < Y)} → and needs both to be True`],
@@ -153,7 +153,7 @@
         explain: P.list(E.map(e => `${C(e[0])}: ${e[2]} → <strong>${py.b(e[1])}</strong>`)) + '<p>Order of evaluation: <code>not</code>, then <code>and</code>, then <code>or</code>.</p>'
       };
     } },
-    { id: 'sel-nested', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'sel-nested', kind: 'output', term: 'State', marks: 2, make(R) {
       const age = R.int(10, 19), mem = R.chance(0.5), price = R.int(5, 9), lim = R.int(13, 17), d1 = R.int(2, 3), d2 = 1, d3 = R.int(1, 2);
       const out = age < lim ? (mem ? price - d1 : price - d2) : (mem ? price - d3 : price);
       return {
@@ -222,7 +222,7 @@
 
   /* ================= B2.3.3  Loops ================= */
   P.add('B2.3.3', [
-    { id: 'loop-range', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'loop-range', kind: 'output', term: 'State', marks: 2, make(R) {
       const v = R.int(0, 3);
       if (v === 0) { const a = R.int(0, 5), s = R.int(2, 4), b = a + s * R.int(2, 4) + R.int(0, 2), xs = range(a, b, s);
         return { prompt: 'What does this program print?', code: `for i in range(${a}, ${b}, ${s}):\n    print(i)`, answer: xs.join('\n'),
@@ -279,7 +279,7 @@
         options: Object.keys(T).map(k => opt(k, k === key, k === key ? `Yes — use this when ${T[k][0]}.` : `Use this when ${T[k][0]}.`))
       };
     } },
-    { id: 'loop-patterns', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'loop-patterns', kind: 'output', term: 'State', marks: 2, make(R) {
       const P2 = R.pick([40, 50, 60]), marks = R.ints(R.int(5, 7), P2 - 25, P2 + 35);
       marks[marks.length - 1] -= marks.reduce((x, y) => x + y, 0) % marks.length; // whole-number mean, so the float prints the same everywhere
       const count = marks.filter(m => m >= P2).length, best = Math.max(...marks), tot = marks.reduce((a, b) => a + b, 0);
@@ -296,7 +296,7 @@
         explain: `<p>A <strong>running total</strong> adds each mark: ${marks.join(' + ')} = ${tot}. Dividing by the ${marks.length} marks with / gives a float: ${py.f(tot / marks.length)}.</p>`
       };
     } },
-    { id: 'loop-validation', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'loop-validation', kind: 'output', term: 'State', marks: 2, make(R) {
       const bad = R.sample([120, -5, 101, -1, 150, 200, -20], R.int(1, 3)), good = R.int(0, 100), all = [...bad, good];
       return {
         prompt: 'This input-validation loop uses a list to stand in for what the user types. What does it print?',
@@ -347,7 +347,7 @@
 
   /* ================= B2.3.4  Functions & modularization ================= */
   P.add('B2.3.4', [
-    { id: 'fn-return-print', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'fn-return-print', kind: 'output', term: 'State', marks: 2, make(R) {
       const v = R.int(0, 2), A = R.int(3, 25), B = R.int(3, 25);
       if (v === 0) return { prompt: 'What does this program print?', code: `def double(x):\n    print(x * 2)\n\nresult = double(${A})\nprint(result)`, answer: `${A * 2}\nNone`,
         explain: `<p><code>double</code> <em>prints</em> ${A * 2} but has no <code>return</code>, so it gives back <code>None</code>. That's what <code>result</code> holds, and what the second print shows.</p>` };
@@ -357,7 +357,7 @@
       return { prompt: 'What does this program print?', code: `def bonus(points):\n    print("Calculating...")\n    return points + 10\n\nprint(bonus(${A}))\nprint(bonus(bonus(${B})))`, answer: `Calculating...\n${A + 10}\nCalculating...\nCalculating...\n${B + 20}`,
         explain: `<p>Every call prints "Calculating..." before returning. <code>bonus(bonus(${B}))</code> calls the function twice — the inner call returns ${B + 10}, the outer returns ${B + 20} — so the message appears twice before ${B + 20}.</p>` };
     } },
-    { id: 'fn-scope', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'fn-scope', kind: 'output', term: 'State', marks: 2, make(R) {
       const A = R.int(2, 9), B = R.int(2, 5), Cc = R.int(2, 9), D = R.int(2, 9);
       if (R.chance(0.5)) return { prompt: 'What does this program print?',
         code: `rate = ${A}\n\ndef price_after(cost):\n    rate = ${B}\n    return cost * rate\n\nprint(price_after(${Cc}))\nprint(rate)`, answer: `${Cc * B}\n${A}`,

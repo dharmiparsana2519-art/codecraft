@@ -6,14 +6,18 @@
 <title>CodeCraft — IB Computer Science SL in Python</title>
 <meta name="description" content="Learn Python for IB DP Computer Science SL (first assessment 2027): lessons, runnable examples, auto-graded exercises, trace tables and quizzes.">
 <script>
-  /* Apply the saved light/dark mode before the page paints. */
-  try { document.documentElement.dataset.mode = (JSON.parse(localStorage.getItem('codecraft.v1') || localStorage.getItem('pypath.v1') || '{}').mode) || 'light'; } catch (e) {}
+  /* Apply light/dark before the page paints: the saved choice, otherwise the device setting. */
+  (function () {
+    var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches, saved = null;
+    try { saved = JSON.parse(localStorage.getItem('codecraft.v1') || localStorage.getItem('pypath.v1') || '{}').mode; } catch (e) {}
+    document.documentElement.dataset.mode = saved || (dark ? 'dark' : 'light');
+  })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body data-screen="home">
 
@@ -95,19 +99,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
 <!-- CodeCraft -->
-<script src="runtime/vfs_preamble.js?v=3"></script>
-<script src="content/course.js?v=3"></script>
-<script src="runner.js?v=3"></script>
-<script src="widgets/playground.js?v=3"></script>
+<script src="runtime/vfs_preamble.js?v=4"></script>
+<script src="content/course.js?v=4"></script>
+<script src="runner.js?v=4"></script>
+<script src="widgets/playground.js?v=4"></script>
 <!-- Unlimited practice: question engine, generators for every topic, question cards -->
-<script src="practice/core.js?v=3"></script>
-<script src="practice/gen-b1.js?v=3"></script>
-<script src="practice/gen-b21.js?v=3"></script>
-<script src="practice/gen-b22.js?v=3"></script>
-<script src="practice/gen-b23.js?v=3"></script>
-<script src="practice/gen-b24.js?v=3"></script>
-<script src="practice/gen-b3.js?v=3"></script>
-<script src="practice/ui.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="practice/core.js?v=4"></script>
+<script src="practice/gen-b1.js?v=4"></script>
+<script src="practice/gen-b21.js?v=4"></script>
+<script src="practice/gen-b22.js?v=4"></script>
+<script src="practice/gen-b23.js?v=4"></script>
+<script src="practice/gen-b24.js?v=4"></script>
+<script src="practice/gen-b3.js?v=4"></script>
+<script src="practice/ui.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

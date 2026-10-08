@@ -209,8 +209,6 @@ code { font-family: var(--font-m); font-size: .88em; }
 .lesson-nav span { font-size: 12.5px; color: var(--faint); font-family: var(--font-m); display: flex; align-items: center; gap: 6px; }
 .lesson-nav b { font-size: 16px; }
 .lesson-nav .next { text-align: right; align-items: flex-end; grid-column: 2; }
-.beyond { margin-top: 16px; padding: 14px 18px; border-style: dashed; font-size: 14px; color: var(--muted); }
-.beyond b { color: var(--text); }
 .missing { padding: 30px; text-align: center; }
 
 /* ================= PLAYGROUND ================= */
@@ -369,6 +367,15 @@ code { font-family: var(--font-m); font-size: .88em; }
   .lesson-nav .next { grid-column: 1; }
 }
 @media (max-width: 520px) {
+  /* Phone header: tighter spacing so menu, logo, Practice, My questions, streak and mode all fit on one line. */
+  .topbar { gap: 6px; padding: 8px 10px; }
+  .top-right { gap: 6px; }
+  .logo { width: 30px; height: 30px; }
+  .brand { gap: 8px; min-width: 0; }
+  .brand-name { font-size: 18px; }
+  .icon-btn { width: 34px; height: 34px; }
+  .top-link { padding: 6px 8px; }
+  .chip-stat.streak { padding: 6px 8px; }
   .brand-sub { display: none; }
   [data-screen=lesson] .crumbs { display: none; }
   .streak .streak-l { display: none; }
@@ -379,6 +386,9 @@ code { font-family: var(--font-m); font-size: .88em; }
   .pg-head { padding: 8px; }
   .pg-actions .btn:first-child span { display: none; }
 }
+@media (max-width: 400px) { .topbar, .top-right { gap: 4px; } .top-link { padding: 6px 7px; } }
+@media (max-width: 360px) { .chip-stat.streak { display: none; } }
+@media (max-width: 340px) { .brand-name { display: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 .fab-editor .up { transform: rotate(90deg); }
 

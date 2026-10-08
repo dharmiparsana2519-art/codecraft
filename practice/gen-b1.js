@@ -342,7 +342,7 @@
         explain: `<p>${t.story}</p><p>The same algorithm in Python:</p>` + P.pre(t.py)
       };
     } },
-    { id: 'fc-trace-select', kind: 'output', term: 'Trace', marks: 1, make(R) {
+    { id: 'fc-trace-select', kind: 'output', term: 'State', marks: 1, make(R) {
       const t = selectChart(R);
       return {
         prompt: `Trace the flowchart when <code>${t.input}</code> is input. What is output?`,

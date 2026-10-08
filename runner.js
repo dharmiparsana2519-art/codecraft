@@ -11,6 +11,72 @@ window.CodeCraft = window.CodeCraft || {};
 (function () {
   let current = null; // { stopped, rejectInput }
 
+  /* Make floats behave like real Python 3 (CPython).
+     Skulpt prints floats with only 16 significant digits (0.1 + 0.2 shows as 0.3) and rounds with
+     Math.round(x * 10**n), which gets cases like round(2.675, 2) wrong. Exam questions test exactly these. */
+  function floatRepr(x) { // CPython's repr(): shortest digits that round-trip, exponent outside 1e-4 … 1e16
+    if (x === 0) return Object.is(x, -0) ? '-0.0' : '0.0';
+    const [m, e] = x.toExponential().split('e'); // no argument = shortest round-trip digits
+    const exp = parseInt(e, 10), neg = m[0] === '-', digits = m.replace('-', '').replace('.', '');
+    let s;
+    if (exp >= -4 && exp < 16) {
+      if (exp >= 0) s = digits.length > exp + 1 ? digits.slice(0, exp + 1) + '.' + digits.slice(exp + 1) : digits + '0'.repeat(exp + 1 - digits.length) + '.0';
+      else s = '0.' + '0'.repeat(-exp - 1) + digits;
+    } else {
+      s = (digits.length > 1 ? digits[0] + '.' + digits.slice(1) : digits) + 'e' + (exp < 0 ? '-' : '+') + String(Math.abs(exp)).padStart(2, '0');
+    }
+    return (neg ? '-' : '') + s;
+  }
+  const nativeToFixed = Number.prototype.toFixed;
+  // Skulpt formats "%.2f" and f"{x:.2f}" with JS toFixed, which rounds exact halves up (0.125 → "0.13").
+  // Python rounds exact halves to even ("0.12"). Only exact ties differ, so everything else stays native.
+  function pyToFixed(d) {
+    const x = Number(this), s = nativeToFixed.call(x, d), n = d === undefined ? 0 : d;
+    if (!isFinite(x) || Math.abs(x) >= 1e21 || n > 99) return s;
+    const [ip, fp] = nativeToFixed.call(Math.abs(x), 100).split('.');
+    const rest = fp.slice(n);
+    if (rest[0] !== '5' || /[1-9]/.test(rest.slice(1))) return s; // not an exact tie
+    let head = ip + fp.slice(0, n);
+    if (+head[head.length - 1] % 2 === 1) head = (BigInt(head) + 1n).toString().padStart(head.length, '0');
+    return (x < 0 ? '-' : '') + (head.slice(0, head.length - n) || '0') + (n ? '.' + head.slice(head.length - n) : '');
+  }
+  function roundHalfEven(x) {
+    const f = Math.floor(x), d = x - f;
+    return d > 0.5 ? f + 1 : d < 0.5 ? f : (f % 2 === 0 ? f : f + 1);
+  }
+  function roundDigits(x, n) { // CPython's round(x, n): correctly rounded from the exact binary value, ties to even
+    if (!isFinite(x) || x === 0 || n > 22 || Math.abs(x) >= 1e21) return x;
+    if (n < 0) { const p = Math.pow(10, -n); return roundHalfEven(x / p) * p; }
+    const [ip, fp] = nativeToFixed.call(Math.abs(x), 100).split('.'); // exact decimal expansion
+    let head = ip + fp.slice(0, n);
+    const rest = fp.slice(n), tie = rest[0] === '5' && !/[1-9]/.test(rest.slice(1));
+    if (rest[0] > '5' || (rest[0] === '5' && !tie) || (tie && +head[head.length - 1] % 2 === 1)) {
+      head = (BigInt(head) + 1n).toString().padStart(head.length, '0');
+    }
+    const whole = head.slice(0, head.length - n) || '0', frac = head.slice(head.length - n);
+    return parseFloat((x < 0 ? '-' : '') + whole + (n ? '.' + frac : ''));
+  }
+  function patchFloats() {
+    const proto = Sk.builtin.float_.prototype, origStr = proto.str$;
+    proto.str$ = function (base, sign) {
+      if (base !== undefined && base !== 10) return origStr.call(this, base, sign);
+      const v = this.v;
+      if (isNaN(v)) return 'nan';
+      if (v === Infinity || v === -Infinity) return v < 0 && sign !== false ? '-inf' : 'inf';
+      return floatRepr(sign === false ? Math.abs(v) : v);
+    };
+    proto.round$ = function (nd) {
+      const x = Sk.builtin.asnum$(this);
+      if (nd === undefined || Sk.builtin.checkNone(nd)) {
+        if (isNaN(x)) throw new Sk.builtin.ValueError('cannot convert float NaN to integer');
+        if (!isFinite(x)) throw new Sk.builtin.OverflowError('cannot convert float infinity to integer');
+        return new Sk.builtin.int_(roundHalfEven(x));
+      }
+      return new Sk.builtin.float_(roundDigits(x, Sk.misceval.asIndexSized(nd)));
+    };
+  }
+  if (typeof Sk !== 'undefined') patchFloats();
+
   function readModule(name) {
     if (Sk.builtinFiles === undefined || Sk.builtinFiles.files[name] === undefined) {
       throw "File not found: '" + name + "'";
@@ -78,6 +144,7 @@ window.CodeCraft = window.CodeCraft || {};
 
     const t0 = performance.now();
     let preDict = null;
+    Number.prototype.toFixed = pyToFixed; // Python's rounding for formatted floats, only while Python runs
     const stopCheck = { '*': () => { if (job.stopped) throw stopError(); } };
     try {
       // 1. The virtual file system, run as its own module so the student's line numbers stay correct.
@@ -94,6 +161,7 @@ window.CodeCraft = window.CodeCraft || {};
     } catch (e) {
       return { ok: false, error: parseError(job.stopped ? stopError() : e), files: preDict ? toJsFiles(preDict._FS) : (opts.files || {}), ms: performance.now() - t0 - job.waited };
     } finally {
+      Number.prototype.toFixed = nativeToFixed;
       if (current === job) current = null;
     }
   }

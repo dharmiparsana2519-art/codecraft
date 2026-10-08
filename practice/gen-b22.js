@@ -90,7 +90,7 @@
     return { items, start, lines, steps, alts };
   }
   P.add('B2.2.2', [
-    { id: 'list-ops', kind: 'output', term: 'Trace', marks: 2, make(R) {
+    { id: 'list-ops', kind: 'output', term: 'State', marks: 2, make(R) {
       const t = listOps(R);
       const extra = R.chance(0.5) && t.items.length > 1 ? [`print(items[-1], len(items))`, `${t.items[t.items.length - 1]} ${t.items.length}`] : null;
       return {
@@ -112,7 +112,7 @@
         check: { code: t.lines.join('\n') + '\nprint(items)', expect: py.r(t.items) }
       };
     } },
-    { id: 'list-2d', kind: 'output', term: 'Trace', marks: 3, make(R) {
+    { id: 'list-2d', kind: 'output', term: 'Determine', marks: 3, make(R) {
       const rows = 3, cols = R.int(3, 4), grid = Array.from({ length: rows }, () => R.ints(cols, 1, 9)), r = R.int(0, rows - 1), c = R.int(0, cols - 1), c2 = R.int(0, cols - 1);
       const P3 = R.sample([
         [`print(marks[${r}][${c}])`, String(grid[r][c]), `row ${r}, column ${c}`],
@@ -174,6 +174,72 @@
     } }
   ]);
 
+  /* B2.2.2 — corresponding (parallel) lists: item i of one list belongs with item i of the other. */
+  const PARALLEL = [
+    { a: 'parcel_ids', b: 'weights', what: 'parcel', unit: 'kg', ids: R => R.sample(['P104', 'P211', 'P305', 'P412', 'P520', 'P618', 'P733', 'P849', 'P902'], R.int(5, 6)), vals: (R, n) => R.sample([0.5, 0.75, 1.25, 1.5, 2.0, 2.25, 2.75, 3.5, 4.0, 4.5, 5.25, 6.0, 7.5, 8.25, 9.5], n), heavy: 'heaviest' },
+    { a: 'students', b: 'marks', what: 'student', unit: 'marks', ids: R => R.sample(P.data.names, R.int(5, 6)), vals: (R, n) => R.distinct(n, 31, 98), heavy: 'highest-scoring' },
+    { a: 'isbns', b: 'loans', what: 'book', unit: 'loans', ids: R => R.sample(['978-0141', '978-0439', '978-0062', '978-1408', '978-0571', '978-0099', '978-1529'], R.int(5, 6)), vals: (R, n) => R.distinct(n, 2, 40), heavy: 'most-borrowed' }
+  ];
+  P.add('B2.2.2', [
+    { id: 'list-parallel', kind: 'output', term: 'Determine', marks: 3, make(R) {
+      const c = R.pick(PARALLEL), ids = c.ids(R), vals = c.vals(R, ids.length), isF = c.what === 'parcel';
+      const show = v => (isF ? py.f(v) : String(v)), lit = arr => '[' + arr.map(show).join(', ') + ']';
+      const v = R.int(0, 2), head = `${c.a} = ${py.r(ids)}\n${c.b} = ${lit(vals)}`;
+      if (v === 0) {
+        let h = 0; vals.forEach((x, i) => { if (x > vals[h]) h = i; });
+        const tot = vals.reduce((x, y) => x + y, 0);
+        return { prompt: `The two lists correspond: <code>${c.b}[i]</code> belongs to <code>${c.a}[i]</code>. What does this program print?`,
+          code: `${head}\nbest = 0\nfor i in range(len(${c.b})):\n    if ${c.b}[i] > ${c.b}[best]:\n        best = i\nprint(${c.a}[best], ${c.b}[best])\ntotal = 0\nfor x in ${c.b}:\n    total = total + x\nprint(total)`,
+          answer: `${ids[h]} ${show(vals[h])}\n${show(tot)}`,
+          explain: `<p><code>best</code> stores the <em>index</em> of the ${c.heavy} ${c.what} so far, so the same index can be used in both lists: index ${h} gives ${ids[h]} and ${show(vals[h])}. The running total adds every value: ${vals.map(show).join(' + ')} = ${show(tot)}.</p>` };
+      }
+      if (v === 1) {
+        const lim = isF ? R.pick([2.5, 3.0, 4.0, 5.0]) : vals.slice().sort((x, y) => x - y)[Math.floor(vals.length / 2)];
+        const keep = ids.filter((id, i) => vals[i] > lim);
+        return { prompt: `The two lists correspond. What does this program print?`,
+          code: `${head}\nlimit = ${show(lim)}\ncount = 0\nfor i in range(len(${c.a})):\n    if ${c.b}[i] > limit:\n        print(${c.a}[i])\n        count = count + 1\nprint("Over the limit:", count)`,
+          answer: [...keep, `Over the limit: ${keep.length}`].join('\n'),
+          explain: `<p>The loop uses one index <code>i</code> for both lists. ${c.what[0].toUpperCase() + c.what.slice(1)}s with a value greater than ${show(lim)}: ${keep.join(', ') || 'none'}. (A value equal to the limit is not printed, because the test is &gt;.)</p>` };
+      }
+      const k = R.int(0, ids.length - 1), present = R.chance(0.75), target = present ? ids[k] : (isF ? 'P000' : c.what === 'student' ? 'Nobody' : '978-0000');
+      const res = present ? show(vals[k]) : '-1';
+      return { prompt: `The two lists correspond. What does this program print?`,
+        code: `${head}\ntarget = "${target}"\nresult = -1\nfor i in range(len(${c.a})):\n    if ${c.a}[i] == target:\n        result = ${c.b}[i]\nprint(result)`,
+        answer: res,
+        explain: present ? `<p>${target} is at index ${k} of <code>${c.a}</code>, so the matching value is <code>${c.b}[${k}]</code> = ${res}.</p>` : `<p>${target} isn't in <code>${c.a}</code>, so <code>result</code> keeps its starting value, -1.</p>` };
+    } },
+    { id: 'list-parallel-trace', kind: 'trace', term: 'Trace', marks: 3, make(R) {
+      const ids = R.sample(['P104', 'P211', 'P305', 'P412', 'P520', 'P618'], 5), w = R.distinct(5, 1, 20);
+      let h = 0; const rows = [[{ v: '', given: true }, { v: '', given: true }, { v: '', given: true }, { v: '0', given: true }]];
+      for (let i = 1; i < w.length; i++) { const cond = w[i] > w[h]; if (cond) h = i; rows.push([{ v: String(i), given: true }, { v: String(w[i]) }, { v: py.b(cond) }, { v: String(h) }]); }
+      const code = `parcel_ids = ${py.r(ids)}\nweights = ${py.r(w)}\nheaviest = 0\nfor i in range(1, len(weights)):\n    if weights[i] > weights[heaviest]:\n        heaviest = i\nprint(parcel_ids[heaviest])`;
+      return { prompt: 'Complete the trace table. The first row shows the value before the loop; the comparison uses <code>heaviest</code> from <em>before</em> the update.', code,
+        columns: ['i', 'weights[i]', 'weights[i] > weights[heaviest]', 'heaviest'], rows,
+        extra: [{ label: 'Output', v: ids[h] }], check: { code, expect: ids[h] },
+        explain: `<p><code>heaviest</code> holds an <em>index</em>, not a weight, so it can be used in both lists. The heaviest parcel is at index ${h}: ${ids[h]} (${w[h]} kg).</p>` };
+    } },
+    { id: 'list-parallel-code', kind: 'code', term: 'Construct', marks: 5, make(R) {
+      const sets = Array.from({ length: 3 }, () => { const ids = R.sample(['P104', 'P211', 'P305', 'P412', 'P520', 'P618', 'P733', 'P849'], R.int(4, 6)); return [ids, R.distinct(ids.length, 1, 30)]; });
+      const v = R.int(0, 2), ban = P.ban('max', 'index', 'sorted', 'sort');
+      if (v === 0) return { prompt: 'The lists <code>ids</code> and <code>weights</code> correspond (<code>weights[i]</code> is the weight of parcel <code>ids[i]</code>). Write <code>heaviest_parcel(ids, weights)</code> that returns the <strong>ID</strong> of the heaviest parcel. <strong>No built-ins:</strong> don\'t use <code>max()</code> or <code>.index()</code>.',
+        starter: 'def heaviest_parcel(ids, weights):\n    pass\n',
+        solution: 'def heaviest_parcel(ids, weights):\n    best = 0\n    for i in range(len(weights)):\n        if weights[i] > weights[best]:\n            best = i\n    return ids[best]\n',
+        tests: sets.map(([ids, w]) => { let h = 0; w.forEach((x, i) => { if (x > w[h]) h = i; }); return P.t(`heaviest_parcel(${py.r(ids)}, ${py.r(w)}) returns ${py.s(ids[h])}`, `heaviest_parcel(${py.r(ids)}, ${py.r(w)})`, ids[h]); }).join('\n'),
+        banned: ban, hint: 'Keep the index of the heaviest weight so far, then use that index in ids.' };
+      if (v === 1) return { prompt: 'The lists <code>ids</code> and <code>weights</code> correspond. Write <code>weight_of(ids, weights, pid)</code> that returns the weight of parcel <code>pid</code>, or <code>-1</code> if it isn\'t there. <strong>No built-ins:</strong> don\'t use <code>.index()</code>.',
+        starter: 'def weight_of(ids, weights, pid):\n    pass\n',
+        solution: 'def weight_of(ids, weights, pid):\n    for i in range(len(ids)):\n        if ids[i] == pid:\n            return weights[i]\n    return -1\n',
+        tests: sets.flatMap(([ids, w]) => { const k = R.int(0, ids.length - 1); return [P.t(`weight_of(…, ${py.s(ids[k])}) returns ${w[k]}`, `weight_of(${py.r(ids)}, ${py.r(w)}, ${py.s(ids[k])})`, w[k])]; }).concat([P.t('weight_of(…, "P000") returns -1', `weight_of(${py.r(sets[0][0])}, ${py.r(sets[0][1])}, "P000")`, -1)]).join('\n'),
+        banned: ban, hint: 'Search ids with an index loop; when ids[i] matches, return weights[i] — the same index.' };
+      const lim = R.int(8, 20);
+      return { prompt: `The lists <code>ids</code> and <code>weights</code> correspond. Write <code>over_limit(ids, weights, limit)</code> that returns a list of the IDs of parcels heavier than <code>limit</code>, in their original order.`,
+        starter: 'def over_limit(ids, weights, limit):\n    pass\n',
+        solution: 'def over_limit(ids, weights, limit):\n    result = []\n    for i in range(len(ids)):\n        if weights[i] > limit:\n            result.append(ids[i])\n    return result\n',
+        tests: sets.map(([ids, w]) => P.t(`over_limit(…, ${lim}) returns ${py.r(ids.filter((x, i) => w[i] > lim))}`, `over_limit(${py.r(ids)}, ${py.r(w)}, ${lim})`, ids.filter((x, i) => w[i] > lim))).join('\n'),
+        hint: 'Loop over the indexes; when weights[i] is over the limit, append ids[i] to a new list.' };
+    } }
+  ]);
+
   /* ================= B2.2.3  Stacks ================= */
   function stackOps(R, n) {
     const st = [], lines = [], out = [], steps = [];
@@ -205,7 +271,7 @@
     };
   } });
   P.add('B2.2.3', [
-    { id: 'stack-ops', kind: 'output', term: 'Trace', marks: 3, make(R) {
+    { id: 'stack-ops', kind: 'output', term: 'Determine', marks: 3, make(R) {
       let t; do { t = stackOps(R, R.int(6, 8)); } while (t.out.length < 2);
       return {
         prompt: 'What does this code print?' + classNote('Stack', STACK), setup: STACK, code: 's = Stack()\n' + t.lines.join('\n'),
@@ -227,7 +293,7 @@
         check: { code: STACK + '\ns = Stack()\n' + lines.join('\n') + '\nprint(s.items)', expect: py.r(st) }
       };
     } },
-    { id: 'stack-static', kind: 'output', term: 'Trace', marks: 3, make(R) {
+    { id: 'stack-static', kind: 'output', term: 'Determine', marks: 3, make(R) {
       const size = R.int(2, 3), vals = R.distinct(6, 1, 9), lines = [], out = [], items = Array(size).fill(null);
       let top = -1;
       const n = R.int(5, 7);
@@ -296,7 +362,7 @@
 
   /* ================= B2.2.4  Queues ================= */
   P.add('B2.2.4', [
-    { id: 'queue-ops', kind: 'output', term: 'Trace', marks: 3, make(R) {
+    { id: 'queue-ops', kind: 'output', term: 'Determine', marks: 3, make(R) {
       const q = [], lines = [], out = [], steps = [], vals = R.sample(P.data.names, 8);
       const n = R.int(6, 8);
       for (let k = 0; k < n; k++) {
@@ -309,7 +375,7 @@
       return { prompt: 'Students join the canteen queue. What does this code print?' + classNote('Queue', QUEUE), setup: QUEUE, code: 'q = Queue()\n' + lines.join('\n'),
         answer: out.join('\n'), explain: P.list(steps) + '<p>Lists are shown front → back.</p>' };
     } },
-    { id: 'queue-circular', kind: 'output', term: 'Trace', marks: 4, make(R) {
+    { id: 'queue-circular', kind: 'output', term: 'Determine', marks: 4, make(R) {
       const size = R.int(3, 4), items = Array(size).fill(null), lines = [], out = [];
       let front = 0, rear = -1, count = 0;
       const vals = R.distinct(8, 1, 9), n = R.int(6, 8);

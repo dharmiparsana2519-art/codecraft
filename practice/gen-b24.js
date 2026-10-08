@@ -190,7 +190,7 @@
           opt('Binary search', false, 'Binary search finds an item; it never changes the list.')], fixedOrder: true
       };
     } },
-    { id: 'sort-count', kind: 'output', term: 'Calculate', marks: 1, make(R) {
+    { id: 'sort-count', kind: 'output', term: 'Determine', marks: 1, make(R) {
       const v = R.int(0, 2);
       if (v === 0) { const n = R.int(5, 12);
         return { prompt: `Bubble sort (code below, no early exit) sorts a list of <strong>${n}</strong> items. How many comparisons does it make <strong>in total</strong>?`, code: BUBBLE, answer: String(n * (n - 1) / 2),

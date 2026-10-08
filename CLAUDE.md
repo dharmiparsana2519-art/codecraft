@@ -6,8 +6,8 @@ The learner is an IB DP2 student. Content must follow the official guide and the
 (Baumgarten, Ganea, Turland, 2025). The full topic map is in `BUILD_PLAN.md`; follow it.
 
 ## Hard rules
-- **Syllabus scope = SL only.** Cover B1.1, B2.1–B2.5, B3.1. Do NOT teach HL-only content
-  (recursion B2.4.4–B2.4.5, B3.2 inheritance/polymorphism, B4 ADTs) except as an optional "Beyond SL" note.
+- **Syllabus scope = SL only.** Cover B1.1, B2.1–B2.5, B3.1 and nothing else. The learner takes SL, so never add
+  HL-only content (recursion B2.4.4–B2.4.5, B3.2, B4) in any form — no "Beyond SL" or "HL" notes, boxes or questions.
 - **Use IB terminology exactly as the guide does**: "construct", "trace", "push / pop / peek / isEmpty",
   "enqueue / dequeue / front / isEmpty", "counted loop" vs "conditional loop", "static vs dynamic data structure",
   "trace table", "Big O", "encapsulation", "information hiding", "instance vs static (class) variables".
@@ -56,7 +56,8 @@ exercises, scan the student's code with a regex for banned names and fail with a
   ligatures OFF so `>=` never renders as `≥`), Caveat (annotations).
 - **Colours: "Python" palette** — blue `#3B82F6` (ink `#1D4ED8` on light), yellow `#FFD43B`, violet `#8B5CF6`,
   highlighter `#FFE45C`. Tokens live as CSS variables in `styles.css`.
-- **Mode: light by default**, dark ("night notebook") via the top-bar toggle, remembered in localStorage.
+- **Mode: follows the device's light/dark setting.** The top-bar toggle overrides it (saved in localStorage);
+  toggling back to the device's own mode returns to following the device.
 - **Layouts:** Home = **sidebar layout** (course tree on the left, dashboard on the right).
   Lesson = **split IDE layout** (lesson on the left, editor + console pinned on the right; course tree in a drawer;
   stacks on phones). Must work at phone width with visible keyboard focus.
@@ -70,8 +71,13 @@ exercises, scan the student's code with a regex for banned names and fail with a
   `code` (hidden tests via `P.HARNESS` + `P.t / P.tf / P.tblock`, optional `banned` / `require`), `written`
   (self-marked against `markscheme`). `term` is the IB command term (Identify, State, Trace, Construct, Describe,
   Explain, Compare, Evaluate, Distinguish, Calculate, Outline).
-- Use IB-style contexts and the shared pools in `P.data`. Keep printed floats short (e.g. divide by 2, 4, 5 or 8):
-  Skulpt prints long repeating decimals with fewer digits than CPython.
+- Use IB-style contexts and the shared pools in `P.data`.
+- Floats: `runner.js` patches Skulpt so float printing, `round()` and `%`/f-string formatting match CPython exactly
+  (Skulpt on its own prints `0.1 + 0.2` as `0.3` and `round(2.675, 2)` as `2.68`). `tools/check.html` re-checks
+  ~6,000 float results against real Python (`tools/floatfuzz.py` → `floatfuzz.out`); regenerate the `.out` with
+  `python3 tools/floatfuzz.py > tools/floatfuzz.out` if you change the `.py`.
+- Command terms: "State" for 1–2 mark predict-the-output questions, "Determine" for 3+ marks, "Trace" only for trace
+  tables and flowcharts.
 - **Verify after every change to a generator** — both must pass:
   1. CPython: `osascript -l JavaScript tools/export.js "$PWD" 100 /tmp/q.json && python3 tools/verify.py /tmp/q.json`
   2. Skulpt (what the site runs): `python3 tools/serve.py`, open `http://localhost:8765/tools/check.html?n=25`.
@@ -84,12 +90,16 @@ exercises, scan the student's code with a regex for banned names and fail with a
 
 ## Deployment
 - Live at **https://dharmiparsana2519-art.github.io/codecraft/** — GitHub repo `dharmiparsana2519-art/codecraft`,
-  GitHub Pages serving the `main` branch root (`.nojekyll` present). It runs without Claude: static files + CDNs.
+  GitHub Pages serving the `main` branch root. It runs without Claude: static files + CDNs.
+- `_config.yml` keeps development files (`tools/`, `design/`, the kit `.md` files) off the live site. The repository
+  itself is public, so they are still visible on GitHub.
 - To update the live site: commit and push to `main` (git needs GitHub sign-in — use the gh CLI as a credential helper: `git -c credential.helper="!gh auth git-credential" push`). Pages rebuilds in about a minute.
 - Bump the `?v=N` on every local script/stylesheet URL in `index.html` when deploying, so browsers don't keep old files.
 - Local preview with caching off: `python3 tools/serve.py` (port 8765).
 
 ## Working style
 - Build in the phases in `PROMPTS.md`. After each phase, open the site in a browser and check it works before moving on.
+- Lessons: "Mark as done" only appears on sections that have real content, and only those sections count towards
+  progress. Error-help links go to the lesson once it has notes, otherwise to its practice page.
 - Keep files small: `app.js` (routing, progress), `runner.js` (Skulpt), `widgets/*.js` (trace table, visualizers), `content/*.js`.
 - Before saying a lesson is done, run every example and every exercise solution through the runner and confirm the tests pass.

@@ -191,12 +191,18 @@ window.CodeCraft = window.CodeCraft || {};
     if (!t.ok && !t.steps.length) { host.innerHTML = `<p class="nt-help">The trace table needs the Python engine, which didn't load. Run the program in the editor instead.</p>`; return; }
     const out = [], last = {};
     // A line that calls a function finishes after the function's own lines, so list it after them.
+    // (A loop's "go round again" rows that follow the call belong after it too, so they move with it.)
     const rows = [], wait = [], all = CC.runner.traceRows(t, src);
-    all.forEach((r, k) => {
-      while (wait.length && wait[wait.length - 1].depth >= r.depth) rows.push(wait.pop());
-      if (all[k + 1] && all[k + 1].depth > r.depth) wait.push(r); else rows.push(r);
-    });
-    while (wait.length) rows.push(wait.pop());
+    for (let k = 0; k < all.length;) {
+      const r = all[k];
+      let e = k + 1;
+      while (e < all.length && all[e].synthetic && all[e].depth === r.depth) e++;
+      const group = all.slice(k, e);
+      while (wait.length && wait[wait.length - 1][0].depth >= r.depth) rows.push(...wait.pop());
+      if (!r.synthetic && all[e] && all[e].depth > r.depth) wait.push(group); else rows.push(...group);
+      k = e;
+    }
+    while (wait.length) rows.push(...wait.pop());
     const condOf = l => (l.match(/^\s*(?:while|if|elif)\s+(.*?):\s*(#.*)?$/) || [])[1];
     for (const r of rows) {
       const ch = new Map(r.changes);

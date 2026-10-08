@@ -7,7 +7,7 @@
      onCodeChange(code),       called (debounced) while typing — use it to save drafts
      onRun(result)             called after every run with { ok, error, files, ms }
    });
-   pg.getCode(), pg.setCode(code), pg.run(), pg.destroy() */
+   pg.getCode(), pg.setCode(code), pg.setFiles(files), pg.run(), pg.destroy() */
 window.CodeCraft = window.CodeCraft || {};
 
 (function () {
@@ -17,7 +17,7 @@ window.CodeCraft = window.CodeCraft || {};
 
   CodeCraft.Playground = function (host, opts = {}) {
     const starter = opts.starter != null ? opts.starter : (opts.code || '');
-    const startFiles = Object.assign({}, opts.files || {});
+    let startFiles = Object.assign({}, opts.files || {});
     let files = Object.assign({}, startFiles);
     let changed = new Set();
     let openFile = Object.keys(files)[0] || null;
@@ -233,6 +233,8 @@ window.CodeCraft = window.CodeCraft || {};
 
     return {
       el: root, run, getCode, setCode,
+      // Replace the virtual files (e.g. when the notes load a program that reads scores.txt); Reset files returns to these.
+      setFiles(f) { startFiles = Object.assign({}, f || {}); files = Object.assign({}, startFiles); changed = new Set(); openFile = Object.keys(files)[0] || null; renderFiles(); },
       refresh() { if (cm) cm.refresh(); },
       destroy() { if (running) CodeCraft.runner.stop(); clearTimeout(saveTimer); if (opts.onCodeChange) opts.onCodeChange(getCode()); root.remove(); }
     };

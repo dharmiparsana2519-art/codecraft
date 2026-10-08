@@ -29,8 +29,14 @@
 <script src="../practice/gen-b3.js?fresh"></script>
 <script src="../practice/ui.js?fresh"></script>
 <script src="../widgets/notes.js?fresh"></script>
+<script src="../content/notes/B2.1.1.js?fresh"></script>
+<script src="../content/notes/B2.1.2.js?fresh"></script>
+<script src="../content/notes/B2.1.3.js?fresh"></script>
 <script src="../content/notes/B2.2.3.js?fresh"></script>
+<script src="../content/notes/B2.3.1.js?fresh"></script>
+<script src="../content/notes/B2.3.2.js?fresh"></script>
 <script src="../content/notes/B2.3.3.js?fresh"></script>
+<script src="../content/notes/B2.3.4.js?fresh"></script>
 <script>
 (async () => {
   const P = CodeCraft.practice, n = +(new URLSearchParams(location.search).get('n') || 10);
@@ -93,7 +99,7 @@
     for (const b of CodeCraft.notes.blocks(id)) {
       let out = '';
       const inputs = (b.inputs || []).slice();
-      const r = await CodeCraft.runner.run(b.code, { onOutput: t => { out += t; }, onInput: p => { const v = inputs.length ? inputs.shift() : ''; out += (p || '') + v + '\n'; return Promise.resolve(v); }, execLimit: 1500 });
+      const r = await CodeCraft.runner.run(b.code, { files: b.files || {}, onOutput: t => { out += t; }, onInput: p => { const v = inputs.length ? inputs.shift() : ''; out += (p || '') + v + '\n'; return Promise.resolve(v); }, execLimit: 1500 });
       const e = b.expect, where = `notes ${id} ${b.where}`, type = r.error && r.error.type;
       if (e.loops) { if (type !== 'TimeLimitError') problems.push(`${where}: should loop for ever, got ${type || 'no error'}`); }
       else if (e.error) { if (type !== e.error) problems.push(`${where}: expected ${e.error}, got ${type || 'no error'}`); }

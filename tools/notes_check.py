@@ -14,9 +14,7 @@ SHIM = r'''
 import builtins, os, sys
 _inputs = %r
 def _input(prompt=""):
-    if not _inputs:
-        raise EOFError("the notes ran out of typed inputs")
-    v = _inputs.pop(0)
+    v = _inputs.pop(0) if _inputs else ""  # like the site's checkers: an empty answer once the typed inputs run out
     sys.stdout.write(str(prompt) + v + "\n")
     return v
 builtins.input = _input
@@ -36,8 +34,11 @@ exec(compile(%r, "<notes>", "exec"), {"__name__": "__main__"})
 '''
 
 
-def run(code, inputs):
+def run(code, inputs, files=None):
     with tempfile.TemporaryDirectory() as d:
+        for name, text in (files or {}).items():
+            with open(os.path.join(d, name), "w") as f:
+                f.write(text)
         path = os.path.join(d, "prog.py")
         with open(path, "w") as f:
             f.write(SHIM % (list(inputs), code))
@@ -68,6 +69,11 @@ for lesson, info in data.items():
         got = sorted(n for add in p["build"] for n in ([add] if isinstance(add, int) else add))
         if got != want:
             problems.append(f"{tag}: the line-by-line build doesn't cover each line once (missing {sorted(set(want) - set(got))}, extra {[n for n in got if got.count(n) > 1 or n not in want]})")
+        if p.get("dash"):
+            problems.append(f"{tag}: a line-by-line step has an empty explanation ('—')")
+        for m in p.get("bads", []):
+            if m and not (1 <= m["bad"] <= len(m["lines"]) and m["lines"][m["bad"] - 1].strip()):
+                problems.append(f"{tag}: a mistake marks line {m['bad']}, which is blank or doesn't exist")
         parts = p["parts"]
         for k in ("goal", "works", "trace", "nobuiltins", "tip", "whys"):
             if not parts[k]:
@@ -79,7 +85,7 @@ for lesson, info in data.items():
         if not parts["vars"]:
             problems.append(f"{tag}: no variables table")
     for b in info["blocks"]:
-        res, exp = run(b["code"], b.get("inputs", [])), b["expect"]
+        res, exp = run(b["code"], b.get("inputs", []), b.get("files")), b["expect"]
         runs += 1
         where = f"{lesson} {b['where']}"
         if exp.get("loops"):

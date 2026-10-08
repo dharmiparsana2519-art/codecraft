@@ -8,6 +8,7 @@
      think: [html], works: html,                           2. think before coding, and why the approach works
      vars: [[name, type, why]],                            3. variables and data types
      code, inputs: [typed values], out,                    the finished program, what to type, what it prints
+     files: { name: text },                                virtual files the programs start with (optional)
      build: [{ add: n | [n, …], why, missing,              4. write it line by line: lines of `code` (1-based) in the
                inputs?, expect? }],                           order you write them; expect 'loops' or 'Error' if
                                                               that stage on its own never ends / crashes
@@ -58,25 +59,27 @@ window.CodeCraft = window.CodeCraft || {};
     if (!N) return list;
     N.programs.forEach((p, pi) => {
       const tag = `program ${pi + 1}`;
-      list.push({ where: `${tag}: finished program`, code: p.code, inputs: p.inputs || [], expect: { out: p.out } });
+      const files = p.files || {};
+      list.push({ where: `${tag}: finished program`, code: p.code, inputs: p.inputs || [], files, expect: { out: p.out } });
       p.build.forEach((b, bi) => {
         const s = stage(p, bi + 1);
         const expect = b.expect === 'loops' ? { loops: true } : b.expect ? { error: b.expect } : bi === p.build.length - 1 ? { out: p.out } : { runs: true };
-        list.push({ where: `${tag}: line-by-line step ${bi + 1}`, code: s.code, inputs: b.inputs || p.inputs || [], expect });
+        list.push({ where: `${tag}: line-by-line step ${bi + 1}`, code: s.code, inputs: b.inputs || p.inputs || [], files, expect });
       });
-      if (p.trace) list.push({ where: `${tag}: trace`, code: p.trace.code || p.code, inputs: p.trace.inputs || p.inputs || [], expect: { runs: true }, trace: p.trace.cols });
-      (p.mistakes || []).forEach((m, mi) => list.push({ where: `${tag}: mistake ${mi + 1}`, code: m.code, inputs: m.inputs || p.inputs || [],
+      if (p.trace) list.push({ where: `${tag}: trace`, code: p.trace.code || p.code, inputs: p.trace.inputs || p.inputs || [], files, expect: { runs: true }, trace: p.trace.cols });
+      (p.mistakes || []).forEach((m, mi) => list.push({ where: `${tag}: mistake ${mi + 1}`, code: m.code, inputs: m.inputs || p.inputs || [], files: m.files || files,
         expect: m.loops ? { loops: true } : m.error ? { error: m.error } : { out: m.out } }));
-      if (p.nobuiltins && p.nobuiltins.code) list.push({ where: `${tag}: no built-ins`, code: p.nobuiltins.code, inputs: p.nobuiltins.inputs || p.inputs || [], expect: { out: p.nobuiltins.out }, banned: p.nobuiltins.ban || [] });
+      if (p.nobuiltins && p.nobuiltins.code) list.push({ where: `${tag}: no built-ins`, code: p.nobuiltins.code, inputs: p.nobuiltins.inputs || p.inputs || [], files, expect: { out: p.nobuiltins.out }, banned: p.nobuiltins.ban || [] });
     });
     return list;
   }
 
   /* ---------- rendering ---------- */
   let runId = 0;
-  const runBtn = (code, inputs, label = 'Run in the editor') => {
+  let curFiles = null; // the files of the program being rendered
+  const runBtn = (code, inputs, label = 'Run in the editor', files = curFiles) => {
     const k = 'r' + (++runId);
-    RUN[k] = { code: trimEnd(code) + '\n', inputs: inputs || [] };
+    RUN[k] = { code: trimEnd(code) + '\n', inputs: inputs || [], files };
     return `<button class="btn sm nt-run" data-run="${k}" type="button">${ICON('play')}${label}</button>`;
   };
   // Code with line numbers; `marks` maps a line number to a class (new / bad / dim).
@@ -112,8 +115,10 @@ window.CodeCraft = window.CodeCraft || {};
     </div>`;
   }
 
+  const filesBox = files => (files && Object.keys(files).length ? `<div class="q-files nt-files">${Object.keys(files).map(n => `<figure class="q-file"><figcaption>${ICON('file')}${esc(n)}</figcaption><pre>${esc(files[n])}</pre></figure>`).join('')}</div>` : '');
   function renderProgram(p, pi, id) {
     const num = pi + 1;
+    curFiles = p.files || null;
     const vars = `<div class="tv-wrap"><table class="tv nt-vars"><thead><tr><th>Variable</th><th>Type</th><th>Why we need it</th></tr></thead><tbody>${p.vars.map(v => `<tr><td><code>${esc(v[0])}</code></td><td>${esc(v[1])}</td><td>${v[2]}</td></tr>`).join('')}</tbody></table></div>`;
     const tr = p.trace;
     return `<section class="nt-prog" id="nt-${esc(id)}-${num}" aria-labelledby="nt-h-${num}">
@@ -121,6 +126,7 @@ window.CodeCraft = window.CodeCraft || {};
       ${H4(1, 'The goal')}
       ${p.goal}
       <dl class="nt-io"><div><dt>In</dt><dd>${p.input}</dd></div><div><dt>Out</dt><dd>${p.output}</dd></div></dl>
+      ${p.files ? `<p class="nt-help">The program reads ${Object.keys(p.files).length === 1 ? 'this file' : 'these files'} — the Run buttons load ${Object.keys(p.files).length === 1 ? 'it' : 'them'} into the editor's Files tab too.</p>${filesBox(p.files)}` : ''}
       ${H4(2, 'Think before coding')}
       <ol class="nt-think">${p.think.map(t => `<li>${t}</li>`).join('')}</ol>
       <p class="nt-works"><b>Why this works:</b> ${p.works}</p>
@@ -141,7 +147,7 @@ window.CodeCraft = window.CodeCraft || {};
         ${block(m.code, m.bad ? { [m.bad]: 'bad' } : {})}${typed(m.inputs)}
         ${result(m)}
         <p><b>Why:</b> ${m.why}</p>
-        ${runBtn(m.code, m.inputs || p.inputs, 'Run it and see')}
+        ${runBtn(m.code, m.inputs || p.inputs, 'Run it and see', m.files || curFiles)}
       </div>`).join('')}</div>
       ${p.nobuiltins && p.nobuiltins.none ? `${H4(7, 'No built-ins version')}<p>${p.nobuiltins.none}</p>` : ''}
       ${p.nobuiltins && p.nobuiltins.code ? `${H4(7, p.nobuiltins.title || 'No built-ins version')}
@@ -181,7 +187,7 @@ window.CodeCraft = window.CodeCraft || {};
   }
   async function traceTable(host, p) {
     const tr = p.trace, src = tr.code || p.code, cols = tr.cols, lines = src.split('\n');
-    const t = await CC.runner.trace(src, { inputs: tr.inputs || p.inputs || [] });
+    const t = await CC.runner.trace(src, { inputs: tr.inputs || p.inputs || [], files: p.files || {} });
     if (!t.ok && !t.steps.length) { host.innerHTML = `<p class="nt-help">The trace table needs the Python engine, which didn't load. Run the program in the editor instead.</p>`; return; }
     const out = [], last = {};
     // A line that calls a function finishes after the function's own lines, so list it after them.
@@ -230,6 +236,7 @@ window.CodeCraft = window.CodeCraft || {};
       if (run) {
         const pg = getPlayground(), r = RUN[run.dataset.run];
         if (!pg || !r) return;
+        if (r.files && pg.setFiles) pg.setFiles(r.files);
         pg.setCode(r.code);
         pg.run();
         const dock = document.getElementById('dock');

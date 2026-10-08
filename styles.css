@@ -749,3 +749,6 @@ code { font-family: var(--font-m); font-size: .88em; }
 /* The `font` shorthand (used on code blocks) resets ligature settings, so switch them off on every element:
    code must show >= and != exactly as typed, never as ≥ or ≠. */
 *, *::before, *::after { font-variant-ligatures: none; font-feature-settings: 'calt' 0, 'liga' 0; }
+.nt-chart { margin: 14px 0; overflow-x: auto; text-align: center; }
+.nt-chart .flowchart { max-width: 100%; height: auto; }
+.nt-spec th { width: 1%; white-space: nowrap; text-align: left; vertical-align: top; text-transform: none; letter-spacing: 0; font: 700 13px var(--font-b); color: var(--ink); background: var(--surface-2); border-bottom: 1px solid var(--border); }

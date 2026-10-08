@@ -28,7 +28,8 @@ The learner must see *how to think*, not just the answer. This applies to everyt
   (7) a no-built-ins version (sum, len, max, min, sort, pop banned) explaining each change; (8) an exam tip on how
   construct questions are usually marked. **Every code block must run in the site's editor**, including every stage
   of the line-by-line build (a `pass` stands in for a block body not written yet). Format and renderer:
-  `widgets/notes.js`. Add each new notes file to the script lists in `index.html` and `tools/check.html`. Verify:
+  `widgets/notes.js`. After adding a notes file, run `python3 tools/sync_notes.py` (it lists every notes file in
+  `index.html` and `tools/check.html`). Verify:
   1. CPython: `osascript -l JavaScript tools/notes_export.js "$PWD" /tmp/notes.json && python3 tools/notes_check.py /tmp/notes.json`
   2. Skulpt: the notes section of `tools/check.html` (runs every block and builds every trace table).
 - **Every practice question shows a "Reasoning" panel after answering, right or wrong:**

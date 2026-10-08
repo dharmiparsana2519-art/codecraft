@@ -166,6 +166,151 @@ window.CodeCraft = window.CodeCraft || {};
     }
   }
 
+  /* ---------- line-by-line tracer ----------
+     CodeCraft.runner.trace(code, { files, inputs, lineOffset }) runs a program with Skulpt's debugger switched on,
+     pausing before every line of the student's program and recording the line and the variables in scope.
+     Returns { ok, error, output, steps: [{ line, depth, func, vars, out }], final, truncated }.
+     `vars` is the state BEFORE the line runs; traceRows() turns that into "what each line changed". */
+  const SKIP = new Set(['__name__', '__doc__', '__package__', '__file__', '__builtins__', '__loader__', '__spec__']);
+  function show(v, depth = 0) {
+    try {
+      if (v === undefined || v === null) return undefined;
+      if (v instanceof Sk.builtin.func || v instanceof Sk.builtin.type || v instanceof Sk.builtin.module || (Sk.builtin.method && v instanceof Sk.builtin.method)) return undefined;
+      const tp = v.ob$type, isUser = tp && tp.sk$klass && v.$d instanceof Sk.builtin.dict;
+      if (isUser && tp.prototype.tp$name === '_VFile') { // the virtual file system's file object
+        const g = k => Sk.ffi.remapToJs(v.$d.mp$subscript(new Sk.builtin.str(k)));
+        return `<file ${py(g('name'))}, mode ${py(g('mode'))}>`;
+      }
+      if (isUser) { // an object of the student's own class: show its attributes
+        if (depth > 1) return tp.prototype.tp$name + '(…)';
+        const parts = [];
+        const keys = Sk.ffi.remapToJs(new Sk.builtin.list(Sk.misceval.arrayFromIterable(v.$d)));
+        keys.forEach(k => parts.push(String(k).replace(/^_[A-Za-z]\w*?(__\w+)$/, '$1') + '=' + show(v.$d.mp$subscript(new Sk.builtin.str(k)), depth + 1)));
+        return tp.prototype.tp$name + '(' + parts.join(', ') + ')';
+      }
+      return String(Sk.misceval.objectRepr(v));
+    } catch (e) { return '…'; }
+  }
+  const py = x => "'" + String(x) + "'";
+  function frameVars(f, depth) {
+    const out = {};
+    if (depth === 1) {
+      for (const k of Object.keys(f.$loc || {})) { if (SKIP.has(k) || k.startsWith('$')) continue; const s = show(f.$loc[k]); if (s !== undefined) out[k] = s; }
+    } else {
+      for (const k of Object.keys(f.$tmps || {})) { if (k.startsWith('$')) continue; const s = show(f.$tmps[k]); if (s !== undefined) out[k] = s; }
+    }
+    return out;
+  }
+  async function trace(code, opts = {}) {
+    if (typeof Sk === 'undefined') return { ok: false, error: { type: 'Offline', message: 'Python engine not loaded', line: null }, output: '', steps: [], final: {} };
+    const job = { stopped: false, rejectInput: null, waited: 0 };
+    current = job;
+    const steps = [], maxSteps = opts.maxSteps || 600, inputs = (opts.inputs || []).map(String);
+    let out = '', truncated = false, preDict = null;
+    Sk.configure({
+      output: t => { out += t; }, read: readModule,
+      inputfun: prompt => { const v = inputs.length ? inputs.shift() : ''; out += (prompt || '') + v + '\n'; return v; },
+      inputfunTakesPrompt: true, __future__: Sk.python3, execLimit: opts.execLimit || 6000, yieldLimit: null,
+      debugging: true, breakpoints: f => f === '<stdin>.py'
+    });
+    Number.prototype.toFixed = pyToFixed;
+    const handler = { 'Sk.debug': susp => {
+      if (job.stopped) throw stopError();
+      if (steps.length < maxSteps) {
+        const frames = []; let s = susp;
+        while (s) { if (s.$lineno !== undefined && s.$filename === '<stdin>.py') frames.push(s); s = s.child; }
+        const f = frames[frames.length - 1];
+        if (f) {
+          const fn = frames.length > 1 && f.$tmps && f.$tmps.self ? 'method' : frames.length > 1 ? 'function' : '';
+          steps.push({ line: f.$lineno, depth: frames.length, func: fn, vars: frameVars(f, frames.length), out: out.length });
+        }
+      } else truncated = true;
+      return Promise.resolve(susp.resume());
+    } };
+    try {
+      const pre = await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('_pre', false, CodeCraft.VFS_PREAMBLE, true), handler);
+      preDict = pre.$d;
+      for (const [name, text] of Object.entries(opts.files || {})) preDict._FS.mp$ass_subscript(new Sk.builtin.str(name), new Sk.builtin.str(text));
+      Sk.builtins.open = preDict.open;
+      Sk.builtins.FileNotFoundError = preDict.FileNotFoundError;
+      const mod = await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true), handler);
+      return { ok: true, error: null, output: out, steps, final: frameVars({ $loc: mod.$d }, 1), truncated };
+    } catch (e) {
+      return { ok: false, error: parseError(job.stopped ? stopError() : e), output: out, steps, final: null, truncated };
+    } finally {
+      Number.prototype.toFixed = nativeToFixed;
+      Sk.configure({ debugging: false, breakpoints: () => true, output: () => {} });
+      if (current === job) current = null;
+    }
+  }
+  /* From trace steps to rows: each row is one line that ran, with the variables it changed (in its own frame)
+     and anything it printed. A line that calls a function shows its changes once the call has returned. */
+  // Block structure from indentation: for each line, its header kind and the last line of its body.
+  function blocks(code) {
+    const lines = code.split('\n'), info = {};
+    const ind = l => l.match(/^\s*/)[0].length, blank = l => !l.trim() || /^\s*#/.test(l);
+    lines.forEach((l, i) => {
+      const m = l.match(/^\s*(for|while|if|elif|else|def|class|with|try|except|finally)\b(.*?):\s*(#.*)?$/);
+      if (!m) return;
+      let end = i;
+      for (let k = i + 1; k < lines.length; k++) { if (blank(lines[k])) continue; if (ind(lines[k]) <= ind(l)) break; end = k; }
+      const target = m[1] === 'for' ? (m[2].match(/^\s*(.+?)\s+in\s/) || [])[1] : null;
+      info[i + 1] = { kind: m[1], start: i + 2, end: end + 1, vars: target ? target.split(',').map(v => v.trim()) : [], name: m[1] === 'def' || m[1] === 'class' ? (m[2].match(/^\s*(\w+)/) || [])[1] : null };
+    });
+    return { info, lines, loops: Object.keys(info).map(Number).filter(h => info[h].kind === 'for' || info[h].kind === 'while') };
+  }
+  function traceRows(t, code) {
+    const rows = [], s = t.steps, B = code ? blocks(code) : { info: {}, loops: [] };
+    const inBody = (h, line) => line >= B.info[h].start && line <= B.info[h].end;
+    for (let i = 0; i < s.length; i++) {
+      const cur = s[i];
+      let j = i + 1;
+      while (j < s.length && s[j].depth > cur.depth) j++;
+      let after = null;
+      if (j < s.length) after = s[j].depth === cur.depth ? s[j].vars : null;
+      else if (cur.depth === 1 && t.final) after = t.final;
+      let changes = after ? Object.keys(after).filter(k => after[k] !== cur.vars[k]).map(k => [k, after[k]]) : [];
+      const nextOut = i + 1 < s.length ? s[i + 1].out : t.output.length;
+      let printed = t.output.slice(cur.out, nextOut);
+      // Leaving a function: anything printed before the caller's next line was printed by the line that made the
+      // call (e.g. print(f(x)) prints after f returns) — unless the function's last line prints something itself.
+      const backTo = i + 1 < s.length ? s[i + 1].depth : 1;
+      if (backTo < cur.depth && printed && B.lines && !/\b(print|input)\s*\(/.test(B.lines[cur.line - 1] || '')) {
+        const caller = rows.slice().reverse().find(r => r.depth === backTo && !r.synthetic);
+        if (caller) { caller.printed += printed; printed = ''; }
+      }
+      const row = { line: cur.line, depth: cur.depth, func: cur.func, changes, vars: after || cur.vars, printed };
+      const h = B.info[cur.line], next = j < s.length && s[j].depth === cur.depth ? s[j].line : null;
+      if (h && (h.kind === 'if' || h.kind === 'elif' || h.kind === 'while')) row.cond = next !== null && inBody(cur.line, next);
+      if (h && (h.kind === 'def' || h.kind === 'class')) row.note = h.kind === 'def' ? `defines ${h.name}()` : `defines class ${h.name}`;
+      rows.push(row);
+      // Loops: Skulpt only pauses on a loop's header the first time, so add the "go round again" / "loop ends" steps.
+      if (next === null) {
+        if (j >= s.length && cur.depth === 1) { // end of the program: close any loops it finished inside
+          B.loops.filter(L => inBody(L, cur.line)).sort((a, b) => B.info[b].start - B.info[a].start).forEach(L => {
+            rows.push({ line: L, depth: 1, func: '', changes: [], vars: row.vars, printed: '', synthetic: true, ...(B.info[L].kind === 'while' ? { cond: false } : { done: true }) });
+          });
+        }
+        continue;
+      }
+      const around = B.loops.filter(L => inBody(L, cur.line)).sort((a, b) => B.info[b].start - B.info[a].start); // innermost first
+      for (const L of around) {
+        const info = B.info[L];
+        if (inBody(L, next) && next <= cur.line) { // same loop goes round again
+          const moved = info.kind === 'for' ? row.changes.filter(([k]) => info.vars.includes(k)) : [];
+          row.changes = row.changes.filter(([k]) => !moved.some(([m]) => m === k));
+          rows.push({ line: L, depth: cur.depth, func: cur.func, changes: moved, vars: row.vars, printed: '', synthetic: true, ...(info.kind === 'while' ? { cond: true } : { next: true }) });
+          break;
+        }
+        if (inBody(L, next)) break; // still inside this loop's body
+        // leaving the loop (or restarting it from the top, which Skulpt shows as a fresh pause on the header)
+        if (info.kind === 'while') rows.push({ line: L, depth: cur.depth, func: cur.func, changes: [], vars: row.vars, printed: '', synthetic: true, cond: false });
+        else rows.push({ line: L, depth: cur.depth, func: cur.func, changes: [], vars: row.vars, printed: '', synthetic: true, done: true });
+      }
+    }
+    return rows;
+  }
+
   function stopError() { const e = new Error('stopped'); e.codecraftStopped = true; return e; }
 
   function stop() {
@@ -212,5 +357,5 @@ window.CodeCraft = window.CodeCraft || {};
     return f ? f(err.message || '') : null;
   }
 
-  CodeCraft.runner = { run, stop, explain, get running() { return !!current; } };
+  CodeCraft.runner = { run, trace, traceRows, stop, explain, get running() { return !!current; } };
 })();

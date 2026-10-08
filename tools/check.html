@@ -12,7 +12,7 @@
 </head>
 <body>
 <h1>Practice question check (Skulpt)</h1>
-<p>Runs every "predict the output" program and every model solution for "write code" questions in the same Python engine the site uses, and compares the results. It also checks ~6,000 float results against real Python (tools/floatfuzz.py / .out). Open via a local server: <code>python3 tools/serve.py</code>, then <code>http://localhost:8765/tools/check.html?n=20</code>.</p>
+<p>Runs every "predict the output" program and every model solution for "write code" questions in the same Python engine the site uses, and compares the results. It also checks that every question has its reasoning: steps for multiple choice, a line-by-line run that works for output and trace questions, notes on every solution line, a diagnosis for every test (and that the solution still passes with its notes removed), and "why this earns the mark" plus a labelled model answer for written questions. Finally it runs every code block in the "Build it from scratch" notes — including every stage of each line-by-line build — and builds every notes trace table. It also checks ~6,000 float results against real Python (tools/floatfuzz.py / .out). Open via a local server: <code>python3 tools/serve.py</code>, then <code>http://localhost:8765/tools/check.html?n=20</code>.</p>
 <p id="status">Running…</p>
 <pre id="out"></pre>
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
@@ -27,25 +27,87 @@
 <script src="../practice/gen-b23.js?fresh"></script>
 <script src="../practice/gen-b24.js?fresh"></script>
 <script src="../practice/gen-b3.js?fresh"></script>
+<script src="../practice/ui.js?fresh"></script>
+<script src="../widgets/notes.js?fresh"></script>
+<script src="../content/notes/B2.2.3.js?fresh"></script>
+<script src="../content/notes/B2.3.3.js?fresh"></script>
 <script>
 (async () => {
   const P = CodeCraft.practice, n = +(new URLSearchParams(location.search).get('n') || 10);
   const norm = s => String(s).replace(/\r/g, '').split('\n').map(l => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
-  const problems = []; let runs = 0;
+  const stripNotes = src => src.split('\n').map(l => { const k = l.lastIndexOf('  # '); return k >= 0 ? l.slice(0, k).replace(/\s+$/, '') : l; }).join('\n');
+  const program = q => q.run ? q.run : q.kind === 'trace' && q.check && q.check.code ? q.check.code : (q.setup ? q.setup + '\n' : '') + (q.code || '');
+  const runTests = async (src, q) => { let out = ''; const r = await CodeCraft.runner.run(src + '\n' + P.HARNESS + '\n' + q.tests, { onOutput: t => { out += t; }, files: q.files || {}, onInput: () => Promise.resolve(''), execLimit: 5000 }); return { r, out }; };
+  const problems = [], counts = { runs: 0, traces: 0, reasoning: 0 };
+  const bad = (q, msg) => problems.push(`${q.topic}/${q.gen} seed ${q.seed}: ${msg}`);
+  const regexOk = (re, flags) => { try { new RegExp(re, flags); return true; } catch (e) { return false; } };
   for (const topic of Object.keys(P.gens)) for (const g of P.gens[topic]) {
-    if (g.kind !== 'output' && g.kind !== 'code') continue;
     for (let i = 0; i < n; i++) {
       const q = P.generate(g, (Math.imul(i + 1, 2246822519) + 7) >>> 0);
-      let out = '';
+      /* 1. The answers are right in Skulpt (what the site runs). */
       if (q.kind === 'output') {
+        let out = '';
         const r = await CodeCraft.runner.run(q.run || ((q.setup ? q.setup + '\n' : '') + q.code), { onOutput: t => { out += t; }, files: q.files || {}, onInput: () => Promise.resolve('') });
-        if (!r.ok || norm(out) !== norm(q.answer)) problems.push(`${topic}/${g.id} seed ${q.seed}: expected ${JSON.stringify(q.answer)} got ${JSON.stringify(out)} ${r.error ? r.error.message : ''}`);
-      } else {
-        const r = await CodeCraft.runner.run(q.solution + '\n' + P.HARNESS + '\n' + q.tests, { onOutput: t => { out += t; }, files: q.files || {}, onInput: () => Promise.resolve(''), execLimit: 5000 });
+        if (!r.ok || norm(out) !== norm(q.answer)) bad(q, `expected ${JSON.stringify(q.answer)} got ${JSON.stringify(out)} ${r.error ? r.error.message : ''}`);
+        counts.runs++;
+      } else if (q.kind === 'code') {
+        const { r, out } = await runTests(q.solution, q);
         const fails = out.split('\n').filter(l => l.startsWith('@@FAIL'));
-        if (!r.ok || fails.length) problems.push(`${topic}/${g.id} seed ${q.seed}: ${fails.join('; ')} ${r.error ? r.error.message : ''}`);
+        if (!r.ok || fails.length) bad(q, `${fails.join('; ')} ${r.error ? r.error.message : ''}`);
+        counts.runs++;
+        /* the "copy without the notes" version must pass too */
+        const plain = await runTests(stripNotes(q.solution), q);
+        if (!plain.r.ok || plain.out.includes('@@FAIL')) bad(q, 'the solution fails once its notes are removed');
+        /* every test name has a diagnosis */
+        const names = out.split('\n').filter(l => l.startsWith('@@PASS|')).map(l => l.split('|')[1]);
+        const diag = q.diagnose || [];
+        names.filter(nm => !diag.some(d => regexOk(d.match) && new RegExp(d.match).test(nm))).forEach(nm => bad(q, `no diagnosis for test "${nm}"`));
+        diag.forEach(d => { if (!regexOk(d.match) || (d.when && !regexOk(d.when, 'm'))) bad(q, `diagnose regex doesn't compile: ${d.match} / ${d.when}`); if (!d.checks || !d.cause) bad(q, 'diagnose entry without checks/cause'); });
       }
-      runs++;
+      /* 2. The reasoning is there. */
+      if (q.kind === 'mcq' && !((q.steps || []).length >= 2)) bad(q, 'no "how to work it out" steps');
+      if (q.kind === 'code') {
+        if (!((q.think || []).length >= 2)) bad(q, 'no "how to think about it" walkthrough');
+        const bare = q.solution.split('\n').filter(l => l.trim() && !/  # \S/.test(l));
+        if (bare.length) bad(q, `solution lines without a note: ${JSON.stringify(bare)}`);
+      }
+      if (q.kind === 'written') {
+        if (!q.markscheme.every(m => m && typeof m === 'object' && m.text && m.why)) bad(q, 'mark-scheme point without "why this earns the mark"');
+        if (!/class="mk"/.test(q.answer || '')) bad(q, 'no model answer with marks labelled');
+      }
+      if (q.kind === 'output' || q.kind === 'trace') {
+        if (!q.explain) bad(q, 'no explanation');
+        /* the line-by-line run shown in the Reasoning panel */
+        const src = program(q), t = await CodeCraft.runner.trace(src, { files: q.files || {}, inputs: [] });
+        const rows = t.steps && t.steps.length ? CodeCraft.runner.traceRows(t, src) : [];
+        if (!t.ok || !rows.length) bad(q, `line-by-line run failed: ${t.error ? t.error.message || t.error : 'no steps'}`);
+        counts.traces++;
+      }
+      counts.reasoning++;
+    }
+  }
+  // "Build it from scratch" notes: every code block (finished programs, every stage of the line-by-line build,
+  // mistakes, no-built-ins versions) must do what the notes say, and every trace table must build.
+  counts.notes = 0;
+  for (const id of Object.keys(CodeCraft.notes.all)) {
+    for (const b of CodeCraft.notes.blocks(id)) {
+      let out = '';
+      const inputs = (b.inputs || []).slice();
+      const r = await CodeCraft.runner.run(b.code, { onOutput: t => { out += t; }, onInput: p => { const v = inputs.length ? inputs.shift() : ''; out += (p || '') + v + '\n'; return Promise.resolve(v); }, execLimit: 1500 });
+      const e = b.expect, where = `notes ${id} ${b.where}`, type = r.error && r.error.type;
+      if (e.loops) { if (type !== 'TimeLimitError') problems.push(`${where}: should loop for ever, got ${type || 'no error'}`); }
+      else if (e.error) { if (type !== e.error) problems.push(`${where}: expected ${e.error}, got ${type || 'no error'}`); }
+      else if (!r.ok) problems.push(`${where}: ${type}: ${r.error.message}`);
+      else if (e.out !== undefined && norm(out) !== norm(e.out)) problems.push(`${where}: expected ${JSON.stringify(e.out)} got ${JSON.stringify(out)}`);
+      counts.notes++;
+    }
+    for (const [pi, p] of CodeCraft.notes.all[id].programs.entries()) {
+      if (!p.trace) continue;
+      const host = document.createElement('div');
+      host.innerHTML = '<div class="nt-tracebox"><pre class="nt-code"></pre><div></div></div>';
+      await CodeCraft.notes.traceTable(host.querySelector('div > div'), p);
+      if (!host.querySelectorAll('tbody tr').length) problems.push(`notes ${id} program ${pi + 1}: the trace table is empty`);
+      counts.traces++;
     }
   }
   // Floats: every result of tools/floatfuzz.py must print exactly as real Python 3 printed it (tools/floatfuzz.out).
@@ -53,9 +115,11 @@
   let fout = '';
   await CodeCraft.runner.run(await (await fetch('floatfuzz.py')).text(), { onOutput: t => { fout += t; }, execLimit: 20000 });
   fout.trim().split('\n').forEach((line, i) => { if (line !== want[i]) problems.push(`floats line ${i + 1}: Python ${want[i]} | site ${line}`); });
-  runs++;
-  document.getElementById('status').innerHTML = problems.length ? `<b class="bad">${problems.length} problem(s) in ${runs} runs</b>` : `<b class="ok">All ${runs} runs match ✓</b>`;
+  counts.runs++;
+  const summary = `${counts.reasoning} questions checked for reasoning, ${counts.traces} line-by-line runs and trace tables, ${counts.runs} answer runs, ${counts.notes} notes code blocks`;
+  document.getElementById('status').innerHTML = problems.length ? `<b class="bad">${problems.length} problem(s)</b> — ${summary}` : `<b class="ok">All match ✓</b> — ${summary}`;
   document.getElementById('out').textContent = problems.join('\n');
+  window.checkDone = { problems: problems.length, ...counts };
 })();
 </script>
 </body>

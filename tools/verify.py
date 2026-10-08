@@ -63,6 +63,39 @@ for q in data["questions"]:
             if err or norm(out) != norm(q["check"]["expect"]):
                 problems[key].append(f'check failed (seed {q["seed"]}): expected {q["check"]["expect"]!r}, got {out!r} {err or ""}')
         k = q["kind"]
+        # RULE "Always teach the reasoning": every question must carry its reasoning.
+        if k == "mcq" and len([x for x in q.get("steps", []) if str(x).strip()]) < 2:
+            problems[key].append(f'no "how to work it out" steps (seed {q["seed"]})')
+        if k in ("output", "trace"):
+            if not str(q.get("explain", "")).strip():
+                problems[key].append(f"no explanation (seed {q['seed']})")
+            src = q.get("run") or (q.get("check") or {}).get("code") if k == "trace" else program(q)
+            src = src or program(q)
+            _, err = run(src, q.get("files"))
+            if err:
+                problems[key].append(f"line-by-line program fails: {err} (seed {q['seed']})")
+        if k == "code":
+            if len(q.get("think", [])) < 2:
+                problems[key].append(f'no "how to think about it" walkthrough (seed {q["seed"]})')
+            bare = [l for l in q["solution"].rstrip("\n").split("\n") if l.strip() and not re.search(r"  # \S", l)]
+            if bare:
+                problems[key].append(f"solution lines without a note: {bare[:2]} (seed {q['seed']})")
+            diag = q.get("diagnose", [])
+            names = re.findall(r"^_check[f]?\('((?:[^'\\]|\\.)*)'|^_check[f]?\(\"((?:[^\"\\]|\\.)*)\"", q["tests"], re.M)
+            names = [a or b for a, b in names]
+            if not diag:
+                problems[key].append(f"no diagnose list (seed {q['seed']})")
+            for nm in names:
+                if not any(re.search(d["match"], nm) for d in diag):
+                    problems[key].append(f"test {nm!r} has no diagnosis (seed {q['seed']})")
+                    break
+            if any(not d.get("checks") or not d.get("cause") for d in diag):
+                problems[key].append(f"diagnose entry missing checks/cause (seed {q['seed']})")
+        if k == "written":
+            if any(not isinstance(m, dict) or not m.get("text") or not m.get("why") for m in q.get("markscheme", [])):
+                problems[key].append(f'mark scheme point without "why this earns the mark" (seed {q["seed"]})')
+            if "class=\"mk\"" not in str(q.get("answer", "")):
+                problems[key].append(f"no model answer with marks labelled (seed {q['seed']})")
         if k == "mcq":
             opts = q["options"]
             texts = [o["text"].strip() for o in opts]

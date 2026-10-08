@@ -47,7 +47,10 @@
       return {
         prompt: `Which data type is most appropriate for storing <strong>${esc(item)}</strong>?`,
         options: [opt(type, true, `Yes — ${reason}. A ${type} holds ${TYPES[type]}.`),
-          ...others.map(t => opt(t, false, (special && special[t]) || `A ${t} holds ${TYPES[t]} — that doesn't fit, because ${reason}.`))]
+          ...others.map(t => opt(t, false, (special && special[t]) || `A ${t} holds ${TYPES[t]} — that doesn't fit, because ${reason}.`))],
+        steps: ['Ask what the data looks like: a single character, a word or sentence, a whole number, a number with a decimal part, or just yes/no?',
+          'Ask what you will do with it: will you calculate with it, or only store and display it? Numbers you never calculate with (phone numbers, codes with leading zeros) are text.',
+          `Here ${reason}, so the best type is <strong>${type}</strong>.`]
       };
     } },
     { id: 'dt-operators', kind: 'output', term: 'State', marks: 2, make(R) {
@@ -78,7 +81,12 @@
           opt(String(r), false, 'That is the remainder (%).'),
           opt(String(Math.ceil(a / b)), false, '/ doesn\'t round to a whole number — it keeps the fractional part.')]
       }[op];
-      return { prompt: `What does <code>print(${a} ${op} ${b})</code> output?`, options: opts, mono: true, check: { code: `print(${a} ${op} ${b})`, expect: opts[0].text } };
+      const steps = {
+        '//': [`Work out how many whole times ${b} fits into ${a}: ${b} × ${q} = ${b * q}, and ${b} × ${q + 1} = ${b * (q + 1)} is too big.`, `<code>//</code> keeps only that whole number and throws the remainder away, so the answer is ${q}.`, 'It is an int (no .0) because both values are ints.'],
+        '%': [`Find the biggest multiple of ${b} that fits into ${a}: ${b} × ${q} = ${b * q}.`, `Subtract it: ${a} − ${b * q} = ${r}. That leftover is the remainder.`, `<code>%</code> gives the remainder, so the answer is ${r}.`],
+        '/': [`<code>/</code> is true division: it always gives a float in Python 3.`, `Divide: ${a} ÷ ${b} = ${py.f(a / b)}.`, 'It keeps the decimal part — it doesn\'t round or drop anything.']
+      }[op];
+      return { prompt: `What does <code>print(${a} ${op} ${b})</code> output?`, options: opts, mono: true, check: { code: `print(${a} ${op} ${b})`, expect: opts[0].text }, steps };
     } },
     { id: 'dt-casting', kind: 'mcq', term: 'State', marks: 1, make(R) {
       const x = R.int(2, 9), y = R.int(2, 9), d = R.int(2, 9) + R.pick([0.2, 0.5, 0.8]), m = R.int(2, 6);
@@ -96,7 +104,10 @@
       return {
         prompt: `What is the result of evaluating <code>${esc(expr)}</code>?`,
         options: [opt(ok, true, why), ...wrong.map(w => opt(w[0], false, w[1]))], mono: true,
-        check: { code: `try:\n    print(repr(${expr}))\nexcept Exception as e:\n    print(type(e).__name__)`, expect: ok }
+        check: { code: `try:\n    print(repr(${expr}))\nexcept Exception as e:\n    print(type(e).__name__)`, expect: ok },
+        steps: ['Work out the type of each value first: quotes mean a string; <code>int()</code>, <code>float()</code> and <code>str()</code> convert to that type (or raise an error if they can\'t).',
+          'Then apply the operator to those types: + adds numbers but joins strings; * multiplies numbers but repeats strings; mixing a string and a number with + is a TypeError.',
+          `So: ${why}`]
       };
     } },
     { id: 'dt-trace', kind: 'trace', term: 'Trace', marks: 3, make(R) {
@@ -169,9 +180,15 @@
         return {
           prompt: `Write a function <code>${fn}(total)</code> that takes a number of ${unitA} and returns the ${unitB} as a pair, e.g. <code>${fn}(${k * 2 + 5})</code> returns <code>(2, 5)</code>. Use <code>//</code> and <code>%</code>.`,
           starter: `def ${fn}(total):\n    # total: int\n    pass\n`,
-          solution: `def ${fn}(total):\n    # total: int\n    return (total // ${k}, total % ${k})\n`,
+          solution: `def ${fn}(total):  # total is the whole amount in ${unitA}\n    # total: int  (exam habit: name the data type in a comment)\n    return (total // ${k}, total % ${k})  # whole ${unitB.split(' and ')[0]} first, then what is left over\n`,
           tests: vals.map(n => P.t(`${fn}(${n}) returns (${Math.floor(n / k)}, ${n % k})`, `${fn}(${n})`, { tuple: [Math.floor(n / k), n % k] })).join('\n'),
-          hint: `How many whole ${k}s fit into total? That's total // ${k}. What's left over is total % ${k}.`
+          hint: `How many whole ${k}s fit into total? That's total // ${k}. What's left over is total % ${k}.`,
+          think: [`Every ${k} ${unitA} make one whole unit of ${unitB.split(' and ')[0]}.`, `<code>total // ${k}</code> counts how many whole units fit; <code>total % ${k}</code> is what is left over.`, 'Return both values together as a pair (a tuple) in the order the question asks for.'],
+          diagnose: [
+            { match: `\\(0, `, checks: `an amount smaller than ${k}, so there are 0 whole units and everything is left over`, cause: 'The pair is probably in the wrong order, or you used / instead of //.' },
+            { match: '.', when: '[^/]/[^/]', checks: `a normal amount of ${unitA}`, cause: `You used <code>/</code>, which gives a decimal. <code>//</code> gives the whole number of units.` },
+            { match: '.', checks: `a normal amount of ${unitA}`, cause: `Check you return <code>(total // ${k}, total % ${k})</code> — two values, whole units first — and that you <em>return</em> rather than print.` }
+          ]
         };
       }
       if (v === 1) {
@@ -179,9 +196,15 @@
         return {
           prompt: 'Write a function <code>average_of_three(a, b, c)</code> that returns the mean of three marks as a decimal (float).',
           starter: 'def average_of_three(a, b, c):\n    pass\n',
-          solution: 'def average_of_three(a, b, c):\n    return (a + b + c) / 3\n',
+          solution: 'def average_of_three(a, b, c):  # three marks come in as parameters\n    return (a + b + c) / 3  # brackets make the adding happen first; / gives a float\n',
           tests: sets.map(([a, b, c]) => P.tf(`average_of_three(${a}, ${b}, ${c}) ≈ ${py.f((a + b + c) / 3)}`, `average_of_three(${a}, ${b}, ${c})`, { f: (a + b + c) / 3 })).join('\n'),
-          hint: 'Add the three values first (in brackets), then divide by 3. Without brackets, only c is divided.'
+          hint: 'Add the three values first (in brackets), then divide by 3. Without brackets, only c is divided.',
+          think: ['The mean is the total divided by how many values there are.', 'Add all three first — brackets force the addition to happen before the division.', 'Use <code>/</code> (not <code>//</code>) so the answer keeps its decimal part.'],
+          diagnose: [
+            { match: '.', when: '\\+\\s*c\\s*/\\s*3', checks: 'the mean of three marks', cause: 'Without brackets, Python divides only <code>c</code> by 3 before adding. Write <code>(a + b + c) / 3</code>.' },
+            { match: '.', when: '//', checks: 'the mean of three marks', cause: '<code>//</code> throws away the decimal part. Use <code>/</code>.' },
+            { match: '.', checks: 'the mean of three marks', cause: 'Make sure you <em>return</em> <code>(a + b + c) / 3</code> — printing it doesn\'t give the value back to the caller.' }
+          ]
         };
       }
       if (v === 2) {
@@ -189,18 +212,30 @@
         return {
           prompt: 'Write a function <code>is_even(n)</code> that returns <code>True</code> if <code>n</code> is even and <code>False</code> otherwise.',
           starter: 'def is_even(n):\n    pass\n',
-          solution: 'def is_even(n):\n    return n % 2 == 0\n',
+          solution: 'def is_even(n):  # n is a whole number\n    return n % 2 == 0  # remainder 0 when divided by 2 means even; == already gives True or False\n',
           tests: [...nums, 0].map(n => P.t(`is_even(${n}) returns ${py.b(n % 2 === 0)}`, `is_even(${n})`, n % 2 === 0)).join('\n'),
-          hint: 'An even number leaves a remainder of 0 when divided by 2. The comparison n % 2 == 0 is already True or False.'
+          hint: 'An even number leaves a remainder of 0 when divided by 2. The comparison n % 2 == 0 is already True or False.',
+          think: ['A number is even when dividing it by 2 leaves nothing over.', '<code>n % 2</code> is that remainder: 0 for even numbers, 1 for odd ones.', 'The comparison <code>n % 2 == 0</code> is already True or False, so return it directly — no if statement needed.'],
+          diagnose: [
+            { match: 'is_even\\(0\\)', checks: 'that 0 counts as even (0 ÷ 2 leaves no remainder)', cause: 'Your test for "even" doesn\'t treat 0 correctly — use <code>n % 2 == 0</code> rather than checking n > 0 or similar.' },
+            { match: 'returns True', when: '%\\s*2\\s*==\\s*1', checks: 'an even number', cause: 'You are testing <code>n % 2 == 1</code>, which is True for odd numbers. Even means the remainder is 0.' },
+            { match: '.', checks: 'whether a normal number is correctly reported as even or odd', cause: 'Return the comparison <code>n % 2 == 0</code>. Check you used <code>%</code> (remainder), not <code>/</code> or <code>//</code>, and that you return rather than print.' }
+          ]
         };
       }
       const temps = R.distinct(4, -10, 40);
       return {
         prompt: 'Write a function <code>to_fahrenheit(celsius)</code> that returns the temperature in °F using <code>F = C × 9 / 5 + 32</code>.',
         starter: 'def to_fahrenheit(celsius):\n    pass\n',
-        solution: 'def to_fahrenheit(celsius):\n    return celsius * 9 / 5 + 32\n',
+        solution: 'def to_fahrenheit(celsius):  # the temperature in °C comes in as a parameter\n    return celsius * 9 / 5 + 32  # * and / happen before +, matching the formula\n',
         tests: temps.map(t => P.tf(`to_fahrenheit(${t}) ≈ ${py.f(t * 9 / 5 + 32)}`, `to_fahrenheit(${t})`, { f: t * 9 / 5 + 32 })).join('\n'),
-        hint: 'Translate the formula directly: celsius * 9 / 5 + 32, and return it.'
+        hint: 'Translate the formula directly: celsius * 9 / 5 + 32, and return it.',
+        think: ['Copy the formula into Python: × becomes <code>*</code>.', 'Python does <code>*</code> and <code>/</code> before <code>+</code>, which is exactly the order the formula needs — so no extra brackets.', 'Return the result so the caller can use it.'],
+        diagnose: [
+          { match: '.', when: '\\(\\s*celsius\\s*\\+\\s*32', checks: 'converting a temperature', cause: 'The brackets make 32 get added before multiplying. The formula multiplies first, then adds 32.' },
+          { match: '.', when: '//', checks: 'converting a temperature', cause: '<code>//</code> drops the decimal part. Use <code>/</code>.' },
+          { match: '.', checks: 'converting a temperature, including negative values', cause: 'Check the formula is exactly <code>celsius * 9 / 5 + 32</code> and that you <em>return</em> it.' }
+        ]
       };
     } }
   ]);
@@ -249,7 +284,10 @@
         prompt: `<code>s = "${s}"</code>. Which expression gives <code>${py.s(target)}</code>?`,
         options: [opt(`s[${a}:${b}]`, true, `It starts at index ${a} and stops before index ${b}, giving ${py.s(target)}.`),
           ...R.sample(cands, 3).map(c => opt(c[0], false, `This gives ${py.s(c[1])} — ${c[2]}.`))], mono: true,
-        check: { code: `s = "${s}"\nprint(repr(s[${a}:${b}]))`, expect: py.s(target) }
+        check: { code: `s = "${s}"\nprint(repr(s[${a}:${b}]))`, expect: py.s(target) },
+        steps: [`Number the characters from 0: ${[...s].map((ch, i) => `${i}=${ch === ' ' ? '␣' : esc(ch)}`).join(' ')}.`,
+          `${py.s(target)} starts at index ${a} (the start of a slice is included).`,
+          `It ends at index ${b - 1}, and a slice stops <em>before</em> its end number, so the end must be ${b}: <code>s[${a}:${b}]</code>.`]
       };
     } },
     { id: 'str-immutable', kind: 'mcq', term: 'State', marks: 1, make(R) {
@@ -260,7 +298,8 @@
           opt(fixed, false, `Python doesn't let you assign to name[0]. To get ${py.s(fixed)} you'd write name = "${L}" + name[1:].`),
           opt(name, false, 'The error on line 2 stops the program before print runs.'),
           opt(L, false, 'Assigning to an index of a string is not allowed at all.')],
-        check: { code: `name = "${name}"\ntry:\n    name[0] = "${L}"\n    print(name)\nexcept TypeError:\n    print("A TypeError is raised")`, expect: 'A TypeError is raised' }
+        check: { code: `name = "${name}"\ntry:\n    name[0] = "${L}"\n    print(name)\nexcept TypeError:\n    print("A TypeError is raised")`, expect: 'A TypeError is raised' },
+        steps: ['Line 2 tries to change one character of a string in place.', 'Strings in Python are <strong>immutable</strong>: once made, their characters can\'t be changed.', 'So line 2 raises a TypeError and the program stops — line 3 never runs.']
       };
       return {
         prompt: `<code>name = "${name}"</code>. Which line changes <code>name</code> to <code>"${fixed}"</code>?`,
@@ -268,7 +307,8 @@
           opt(`name[0] = "${L}"`, false, 'Strings are immutable, so this raises TypeError.'),
           opt(`name.replace("${name[0]}", "${L}")`, false, 'replace() returns a new string, but it isn\'t assigned back, so name doesn\'t change.'),
           opt(`name = name[0] + "${L}"`, false, `This gives ${py.s(name[0] + L)} — the first letter plus "${L}".`)], mono: true,
-        check: { code: `name = "${name}"\nname = "${L}" + name[1:]\nprint(name)`, expect: fixed }
+        check: { code: `name = "${name}"\nname = "${L}" + name[1:]\nprint(name)`, expect: fixed },
+        steps: ['Strings can\'t be changed in place, so you must build a <em>new</em> string and assign it back to <code>name</code>.', `Keep everything except the first letter: <code>name[1:]</code> is ${py.s(name.slice(1))}.`, `Put "${L}" in front and assign it back: <code>name = "${L}" + name[1:]</code> gives ${py.s(fixed)}.`]
       };
     } },
     { id: 'str-loop', kind: 'output', term: 'State', marks: 2, make(R) {
@@ -299,9 +339,16 @@
         return {
           prompt: `Write <code>count_char(text, ch)</code> that returns how many times the character <code>ch</code> appears in <code>text</code>. <strong>No built-ins:</strong> don't use <code>.count()</code>.`,
           starter: 'def count_char(text, ch):\n    pass\n',
-          solution: 'def count_char(text, ch):\n    total = 0\n    for c in text:\n        if c == ch:\n            total = total + 1\n    return total\n',
+          solution: 'def count_char(text, ch):  # text to search, ch is the character to count\n    total = 0  # the counter starts at 0, before the loop\n    for c in text:  # visit every character, one at a time\n        if c == ch:  # is this character the one we are counting?\n            total = total + 1  # yes: add one to the counter\n    return total  # after the loop has checked every character\n',
           tests: texts.map(t => P.t(`count_char(${py.s(t)}, ${py.s(ch)}) returns ${[...t].filter(c => c === ch).length}`, `count_char(${py.s(t)}, ${py.s(ch)})`, [...t].filter(c => c === ch).length)).join('\n') + '\n' + P.t('count_char("", "a") returns 0', 'count_char("", "a")', 0),
-          banned: P.ban('count'), hint: 'Start a counter at 0, loop over every character, and add 1 when it matches ch.'
+          banned: P.ban('count'), hint: 'Start a counter at 0, loop over every character, and add 1 when it matches ch.',
+          think: ['This is the "count" pattern: a counter that starts at 0 and goes up by 1 each time something matches.', 'A <code>for</code> loop visits each character of the string once.', 'Compare each character with <code>ch</code>; only add 1 when they are equal.', 'Return the counter <em>after</em> the loop — returning inside the loop would stop after the first character.'],
+          diagnose: [
+            { match: 'count_char\\(""', checks: 'an empty string, which contains no characters at all', cause: 'Your function doesn\'t return 0 when the loop never runs — make sure the counter starts at 0 and is returned after the loop.' },
+            { match: '.', when: '^\\s{8,}return', checks: `counting every ${py.s(ch)} in a sentence`, cause: 'Your <code>return</code> is indented inside the loop, so the function stops after the first character. Move it out to line up with <code>for</code>.' },
+            { match: '.', when: 'total\\s*=\\s*1\\s*$', checks: `counting every ${py.s(ch)} in a sentence`, cause: 'You set the counter to 1 instead of adding 1 to it. Use <code>total = total + 1</code>.' },
+            { match: '.', checks: `counting every ${py.s(ch)} in a sentence`, cause: 'Check the counter starts at 0 before the loop, increases only when <code>c == ch</code>, and is returned after the loop.' }
+          ]
         };
       }
       if (v === 1) {
@@ -309,9 +356,15 @@
         return {
           prompt: 'Write <code>reverse_text(text)</code> that returns the text backwards. <strong>No built-ins:</strong> don\'t use <code>[::-1]</code> or <code>reversed()</code>.',
           starter: 'def reverse_text(text):\n    pass\n',
-          solution: 'def reverse_text(text):\n    result = ""\n    for ch in text:\n        result = ch + result\n    return result\n',
+          solution: 'def reverse_text(text):  # the text to reverse\n    result = ""  # start with an empty string to build the answer in\n    for ch in text:  # take the characters in their normal order\n        result = ch + result  # put each one in FRONT of what we have so far\n    return result  # the last character ended up first\n',
           tests: words.map(w => P.t(`reverse_text(${py.s(w)}) returns ${py.s([...w].reverse().join(''))}`, `reverse_text(${py.s(w)})`, [...w].reverse().join(''))).join('\n'),
-          banned: P.ban('slicerev', 'reversed'), hint: 'Build a new string by adding each character to the front of it.'
+          banned: P.ban('slicerev', 'reversed'), hint: 'Build a new string by adding each character to the front of it.',
+          think: ['Strings can\'t be changed, so build a new one, starting from <code>""</code>.', 'Go through the characters in order. Putting each new character in <em>front</em> of the result reverses the order: "C", then "OC", then "MOC"…', 'Return the finished string after the loop.'],
+          diagnose: [
+            { match: '.', when: 'result\\s*=\\s*result\\s*\\+\\s*ch', checks: 'reversing a word', cause: '<code>result = result + ch</code> adds each character to the end, which copies the word unchanged. Put the character in front: <code>result = ch + result</code>.' },
+            { match: '.', when: '^\\s{8,}return', checks: 'reversing a word', cause: 'Your <code>return</code> is inside the loop, so it returns after one character. Line it up with <code>for</code>.' },
+            { match: '.', checks: 'reversing a word', cause: 'Start with an empty string, add each character to the front, and return the result after the loop.' }
+          ]
         };
       }
       if (v === 2) {
@@ -319,9 +372,15 @@
         return {
           prompt: 'Write <code>initials(full_name)</code> that returns the first letter of each word, e.g. <code>initials("Ada Lovelace")</code> returns <code>"AL"</code>.',
           starter: 'def initials(full_name):\n    pass\n',
-          solution: 'def initials(full_name):\n    result = ""\n    for word in full_name.split():\n        result = result + word[0]\n    return result\n',
+          solution: 'def initials(full_name):  # e.g. "Ada Lovelace"\n    result = ""  # the initials are collected in this string\n    for word in full_name.split():  # split() breaks the name at the spaces into a list of words\n        result = result + word[0]  # index 0 is the first letter of the word\n    return result  # e.g. "AL"\n',
           tests: people.map(p => P.t(`initials(${py.s(p)}) returns ${py.s(p.split(' ').map(w => w[0]).join(''))}`, `initials(${py.s(p)})`, p.split(' ').map(w => w[0]).join(''))).join('\n'),
-          hint: 'full_name.split() gives a list of the words. Take word[0] from each.'
+          hint: 'full_name.split() gives a list of the words. Take word[0] from each.',
+          think: ['Break the problem down: first get the separate words, then take the first letter of each.', '<code>full_name.split()</code> splits at the spaces, giving a list such as <code>["Ada", "Lovelace"]</code>.', '<code>word[0]</code> is the first character of a word; add each one to the end of a result string.'],
+          diagnose: [
+            { match: '.', when: 'full_name\\[0\\]', checks: 'names with two or three words', cause: '<code>full_name[0]</code> is only the first letter of the whole name. Loop over <code>full_name.split()</code> and take <code>word[0]</code> from each word.' },
+            { match: '.', when: 'for\\s+\\w+\\s+in\\s+full_name\\s*:', checks: 'names with two or three words', cause: 'Looping over <code>full_name</code> visits every <em>character</em>, not every word. Loop over <code>full_name.split()</code>.' },
+            { match: '.', checks: 'names with two or three words, including middle names', cause: 'Make sure every word contributes its first letter, in order, and that you return the joined string.' }
+          ]
         };
       }
       if (v === 3) {
@@ -330,9 +389,17 @@
         return {
           prompt: `A valid library code starts with <code>"${pre}"</code> followed by exactly ${d} digits (e.g. <code>"${pre}${'0123456789'.slice(0, d)}"</code>). Write <code>is_valid_code(code)</code> that returns <code>True</code> or <code>False</code>.`,
           starter: 'def is_valid_code(code):\n    pass\n',
-          solution: `def is_valid_code(code):\n    if len(code) != ${2 + d}:\n        return False\n    if code[:2] != "${pre}":\n        return False\n    return code[2:].isdigit()\n`,
+          solution: `def is_valid_code(code):  # code is the text to check\n    if len(code) != ${2 + d}:  # 2 letters + ${d} digits = ${2 + d} characters\n        return False  # wrong length: invalid, no need to check more\n    if code[:2] != "${pre}":  # the first two characters must be the prefix\n        return False  # wrong prefix: invalid\n    return code[2:].isdigit()  # the rest must all be digits — this is already True or False\n`,
           tests: cases.map(([c, ok]) => P.t(`is_valid_code(${py.s(c)}) returns ${py.b(ok)}`, `is_valid_code(${py.s(c)})`, ok)).join('\n'),
-          hint: `Check three things: the length is ${2 + d}, code[:2] is "${pre}", and code[2:].isdigit() is True.`
+          hint: `Check three things: the length is ${2 + d}, code[:2] is "${pre}", and code[2:].isdigit() is True.`,
+          think: [`Split the rule into separate checks: the length, the prefix, and the digits.`, `Return False as soon as any check fails — there is no need to test the rest.`, `<code>code[:2]</code> is the first two characters and <code>code[2:]</code> is everything after them; <code>.isdigit()</code> is True only if every character is a digit.`],
+          diagnose: [
+            { match: `'${pre}\\d{${d - 1}}'|'${pre}\\d{${d + 1}}'`, checks: `a code with the right prefix but the wrong number of digits`, cause: `Check the length first: a valid code has exactly ${2 + d} characters.` },
+            { match: `'${pre}\\d+A'`, checks: 'a code of the right length that has a letter where a digit should be', cause: 'You need to check that everything after the prefix is a digit — <code>code[2:].isdigit()</code>.' },
+            { match: "'(XX|AB|ZZ)", checks: 'a code with the wrong first two letters', cause: `Compare the first two characters with the prefix: <code>code[:2] != "${pre}"</code>.` },
+            { match: 'returns True', checks: 'a valid code', cause: 'A valid code is being rejected. Check that each test only returns False when it fails, and that the last line returns True for a correct code.' },
+            { match: '.', checks: 'a code that breaks one of the rules', cause: 'Every rule needs its own check that returns False.' }
+          ]
         };
       }
       const k = R.pick([3, 4]);
@@ -341,9 +408,15 @@
       return {
         prompt: `Usernames are the first ${k} letters of the surname, then the first letter of the first name, then the last two digits of the year, all lower case — e.g. <code>make_username("Ada", "Lovelace", 2009)</code> returns <code>"${make('Ada', 'Lovelace', 2009)}"</code>. Write <code>make_username(first, last, year)</code>.`,
         starter: 'def make_username(first, last, year):\n    pass\n',
-        solution: `def make_username(first, last, year):\n    name = last[:${k}] + first[0]\n    return name.lower() + str(year)[2:]\n`,
+        solution: `def make_username(first, last, year):  # e.g. "Ada", "Lovelace", 2009\n    name = last[:${k}] + first[0]  # first ${k} letters of the surname, then the first initial\n    return name.lower() + str(year)[2:]  # lower case, then the year as text from index 2 ("09")\n`,
         tests: people.map(([f, l, y]) => P.t(`make_username(${py.s(f)}, ${py.s(l)}, ${y}) returns ${py.s(make(f, l, y))}`, `make_username(${py.s(f)}, ${py.s(l)}, ${y})`, make(f, l, y))).join('\n'),
-        hint: `Use slicing: last[:${k}] and first[0]. Turn the year into a string with str(year) before slicing [2:].`
+        hint: `Use slicing: last[:${k}] and first[0]. Turn the year into a string with str(year) before slicing [2:].`,
+        think: ['Break the username into its three pieces and build each with slicing.', `<code>last[:${k}]</code> is the first ${k} letters; <code>first[0]</code> is the first letter.`, 'The year is a number, so convert it with <code>str(year)</code> before slicing; <code>[2:]</code> keeps the last two digits.', 'Apply <code>.lower()</code> to the letters so the whole username is lower case.'],
+        diagnose: [
+          { match: '.', when: 'year\\s*\\[', checks: 'building a username from a name and a year', cause: 'You sliced the year while it is still a number, which raises a TypeError. Convert it first: <code>str(year)[2:]</code>.' },
+          { match: '.', when: `last\\[:${k + 1}\\]|last\\[0:${k + 1}\\]`, checks: 'building a username from a name and a year', cause: `<code>last[:${k + 1}]</code> takes ${k + 1} letters — the end of a slice isn't included, so use <code>last[:${k}]</code>.` },
+          { match: '.', checks: 'building a username from a name and a year', cause: 'Check each piece separately: the first letters of the surname, the first initial, <code>.lower()</code>, and the last two digits of the year as text.' }
+        ]
       };
     } }
   ]);
@@ -400,7 +473,10 @@
       return {
         prompt: 'Which exception does this code raise?', code: snippet,
         options: [opt(exc, true, `Correct — ${exc} is raised when ${EXC[exc]}.`), ...others.map(e => opt(e, false, `${e} is raised when ${EXC[e]}, which doesn't happen here.`))], mono: true,
-        check: { code: `try:\n${snippet.split('\n').map(l => '    ' + l).join('\n')}\nexcept Exception as e:\n    print(type(e).__name__)`, expect: exc }
+        check: { code: `try:\n${snippet.split('\n').map(l => '    ' + l).join('\n')}\nexcept Exception as e:\n    print(type(e).__name__)`, expect: exc },
+        steps: ['Run the code in your head one line at a time and find the line that can\'t succeed.',
+          { ValueError: 'int() is given text that doesn\'t look like a whole number — right type (a string), wrong content.', ZeroDivisionError: 'count is 0, so the division divides by zero.', IndexError: `The list has 3 items, so the valid indexes are 0, 1 and 2 — index 3 doesn't exist.`, FileNotFoundError: 'The file is opened for reading ("r"), but no file with that name exists.', TypeError: 'A string and an integer are joined with + — Python won\'t mix those types.', NameError: '<code>nmae</code> is misspelled, so Python has never seen that name.' }[exc],
+          `That kind of failure raises <strong>${exc}</strong>.`]
       };
     } },
     { id: 'ex-failure', kind: 'mcq', term: 'Identify', marks: 1, make(R) {
@@ -412,7 +488,10 @@
       const cat = R.pick(Object.keys(CATS)), text = R.pick(CATS[cat][1]);
       return {
         prompt: `Which point of failure is this?<blockquote>${esc(text)}</blockquote>`,
-        options: Object.keys(CATS).map(c => opt(c, c === cat, c === cat ? `Yes — ${CATS[c][0]}.` : `${c} means ${CATS[c][0]}.`))
+        options: Object.keys(CATS).map(c => opt(c, c === cat, c === cat ? `Yes — ${CATS[c][0]}.` : `${c} means ${CATS[c][0]}.`)),
+        steps: ['Ask where the problem comes from: the <em>data</em> given to the program, something <em>outside</em> the program it depends on, or the program\'s <em>own steps</em>?',
+          'Bad data from a user or device → unexpected input. A missing file, server, printer or network → resource unavailability. The program runs but its logic is wrong → logic error.',
+          `Here ${CATS[cat][0]}, so it is <strong>${cat.toLowerCase()}</strong>.`]
       };
     } },
     { id: 'ex-concept', kind: 'mcq', term: 'State', marks: 1, make(R) {
@@ -428,8 +507,15 @@
         ['Which statement should go inside the <code>try</code> block?', ['The line that might fail, e.g. <code>n = int(text)</code>', 'Only code that can raise the exception needs protecting.'],
           [['Every line of the program', 'Wrapping everything hides where errors come from.'], ['The print that says "Done"', 'Code that must always run belongs in finally.'], ['The except block', 'except comes after try, not inside it.']]]
       ];
-      const [q, ok, wrong] = R.pick(QS);
-      return { prompt: q, options: [opt(ok[0], true, ok[1]), ...wrong.map(w => opt(w[0], false, w[1]))] };
+      const STEPS = [
+        ['Picture the two cases: the try block works, or it raises an exception.', 'If it works, the except blocks are skipped. If it fails, a matching except block runs.', 'Either way, the <code>finally</code> block runs last — that is its job.'],
+        ['Think about what a bare <code>except:</code> catches: every error, including your own bugs (a misspelled name, a wrong index).', 'Naming the exception catches only the failure you planned for.', 'So unexpected bugs still show up, and you can fix them.'],
+        ['Python looks for an <code>except</code> that matches the exception.', 'None matches, so the error is not handled.', 'The <code>finally</code> block still runs, then the program stops with the error message.'],
+        ['Think about when errors like a missing file or bad input happen: while the program is running.', 'Without handling, the program would crash at that point.', 'try/except lets it respond instead — show a message, ask again, or use a default.'],
+        ['Ask which line could actually fail when the program runs.', 'Only that line needs protecting — wrapping everything hides where the error came from.', 'Code that must always run goes in <code>finally</code>, and the <code>except</code> block comes after <code>try</code>, not inside it.']
+      ];
+      const k = R.int(0, QS.length - 1), [q, ok, wrong] = QS[k];
+      return { prompt: q, options: [opt(ok[0], true, ok[1]), ...wrong.map(w => opt(w[0], false, w[1]))], steps: STEPS[k] };
     } },
     { id: 'ex-code', kind: 'code', term: 'Construct', marks: 4, make(R) {
       const v = R.int(0, 2), req = [{ label: 'a try block', re: '\\btry\\s*:' }, { label: 'an except block', re: '\\bexcept\\b' }];
@@ -438,9 +524,16 @@
         return {
           prompt: 'Write <code>safe_int(text)</code> that returns <code>text</code> converted to an integer, or <code>None</code> if it isn\'t a whole number. Use <code>try</code> / <code>except ValueError</code>.',
           starter: 'def safe_int(text):\n    pass\n',
-          solution: 'def safe_int(text):\n    try:\n        return int(text)\n    except ValueError:\n        return None\n',
+          solution: 'def safe_int(text):  # text might or might not be a whole number\n    try:  # attempt the line that can fail\n        return int(text)  # works for "42" or "-7"; raises ValueError for "abc" or "3.5"\n    except ValueError:  # only this specific failure is handled\n        return None  # signal "not a whole number" instead of crashing\n',
           tests: [...good.map(g => P.t(`safe_int(${py.s(g)}) returns ${g}`, `safe_int(${py.s(g)})`, +g)), ...bad.map(b => P.t(`safe_int(${py.s(b)}) returns None`, `safe_int(${py.s(b)})`, null))].join('\n'),
-          require: req, hint: 'Put return int(text) inside try. In except ValueError, return None.'
+          require: req, hint: 'Put return int(text) inside try. In except ValueError, return None.',
+          think: ['Find the risky line: <code>int(text)</code> raises ValueError when the text isn\'t a whole number.', 'Put that line inside <code>try</code> and return its result straight away.', 'Catch exactly <code>ValueError</code> and return <code>None</code> instead.'],
+          diagnose: [
+            { match: 'returns None', when: 'isdigit', checks: 'text that is not a whole number', cause: 'An <code>.isdigit()</code> check isn\'t needed — and it rejects negative numbers like "-7". Let <code>int()</code> try, and catch the ValueError.' },
+            { match: 'returns None', checks: 'text that is not a whole number (letters, a decimal point, or empty)', cause: 'Your except block doesn\'t return <code>None</code>, or it catches the wrong exception. <code>int("abc")</code> raises <strong>ValueError</strong>.' },
+            { match: "\\('-", checks: 'a negative whole number such as "-7"', cause: '<code>int("-7")</code> is valid and gives -7. Don\'t reject text just because it starts with a minus sign.' },
+            { match: '.', checks: 'text that is a whole number', cause: 'Return <code>int(text)</code> from inside the try block — make sure you return the converted number, not the original text.' }
+          ]
         };
       }
       if (v === 1) {
@@ -448,9 +541,15 @@
         return {
           prompt: 'Write <code>safe_divide(a, b)</code> that returns <code>a / b</code>, or <code>None</code> if <code>b</code> is 0. Use <code>try</code> / <code>except ZeroDivisionError</code> (not an if statement).',
           starter: 'def safe_divide(a, b):\n    pass\n',
-          solution: 'def safe_divide(a, b):\n    try:\n        return a / b\n    except ZeroDivisionError:\n        return None\n',
+          solution: 'def safe_divide(a, b):  # b might be 0\n    try:  # attempt the division\n        return a / b  # fine whenever b is not 0\n    except ZeroDivisionError:  # raised only when b is 0\n        return None  # report "can\'t divide" instead of crashing\n',
           tests: pairs.map(([a, b]) => b ? P.tf(`safe_divide(${a}, ${b}) ≈ ${py.f(a / b)}`, `safe_divide(${a}, ${b})`, { f: a / b }) : P.t(`safe_divide(${a}, 0) returns None`, `safe_divide(${a}, 0)`, null)).join('\n'),
-          require: req, hint: 'Return a / b inside try; catch ZeroDivisionError and return None.'
+          require: req, hint: 'Return a / b inside try; catch ZeroDivisionError and return None.',
+          think: ['The risky operation is <code>a / b</code>: it fails when b is 0.', 'Put it in a try block and return the result directly.', 'Catch <code>ZeroDivisionError</code> and return <code>None</code>.'],
+          diagnose: [
+            { match: ', 0\\)', checks: 'dividing by zero', cause: 'Your except block doesn\'t return <code>None</code>, or it catches the wrong exception. Dividing by zero raises <strong>ZeroDivisionError</strong>.' },
+            { match: '.', when: '//', checks: 'a normal division', cause: '<code>//</code> drops the decimal part. Use <code>/</code> so the result is a float.' },
+            { match: '.', checks: 'a normal division', cause: 'Return <code>a / b</code> from inside the try block.' }
+          ]
         };
       }
       const files = {}, names = R.sample(['menu.txt', 'loans.txt', 'scores.txt', 'notes.txt'], 2);
@@ -459,10 +558,16 @@
       return {
         prompt: `Write <code>read_first_line(filename)</code> that returns the first line of the file without its newline, or <code>"File not found"</code> if the file doesn't exist. (The Files tab has ${names.map(n => `<code>${n}</code>`).join(' and ')}.)`,
         starter: 'def read_first_line(filename):\n    pass\n',
-        solution: 'def read_first_line(filename):\n    try:\n        f = open(filename, "r")\n        line = f.readline()\n        f.close()\n        return line.strip()\n    except FileNotFoundError:\n        return "File not found"\n',
+        solution: 'def read_first_line(filename):  # the name of the file to read\n    try:  # opening is the step that can fail\n        f = open(filename, "r")  # raises FileNotFoundError if the file doesn\'t exist\n        line = f.readline()  # reads one line, including its "\\n"\n        f.close()  # always close a file you opened\n        return line.strip()  # strip() removes the newline at the end\n    except FileNotFoundError:  # only a missing file is handled here\n        return "File not found"  # the message the question asks for\n',
         files,
         tests: [...names.map(n => P.t(`read_first_line(${py.s(n)}) returns ${py.s(files[n].split('\n')[0])}`, `read_first_line(${py.s(n)})`, files[n].split('\n')[0])), P.t(`read_first_line(${py.s(missing)}) returns "File not found"`, `read_first_line(${py.s(missing)})`, 'File not found')].join('\n'),
-        require: req, hint: 'Open and read inside try. Catch FileNotFoundError. Use .strip() to remove the newline.'
+        require: req, hint: 'Open and read inside try. Catch FileNotFoundError. Use .strip() to remove the newline.',
+        think: ['The risky step is opening the file — it may not exist.', 'Inside try: open the file, read one line with <code>readline()</code>, close it, and return the line with <code>.strip()</code> to remove the newline.', 'Catch <code>FileNotFoundError</code> and return the message "File not found".'],
+        diagnose: [
+          { match: 'File not found', checks: 'a file name that doesn\'t exist', cause: 'Catch <strong>FileNotFoundError</strong> and return exactly "File not found" (same capitals, no full stop).' },
+          { match: '.', when: 'readlines|read\\(\\)', checks: 'reading the first line of a file that exists', cause: '<code>read()</code> and <code>readlines()</code> read the whole file. Use <code>readline()</code> for one line.' },
+          { match: '.', checks: 'reading the first line of a file that exists', cause: 'The line still ends with "\\n" — return <code>line.strip()</code>.' }
+        ]
       };
     } },
     { id: 'ex-describe', kind: 'written', term: 'Describe', marks: 3, make(R) {
@@ -473,8 +578,13 @@
       ]);
       return {
         prompt: `Describe how <code>try</code>, <code>except</code> and <code>finally</code> could be used in ${sc[0]}.`,
-        markscheme: [`Put the statement that might fail (e.g. <code>${esc(sc[1])}</code>) inside a <code>try</code> block`, `Add an <code>except ${sc[2]}</code> block that handles the error, e.g. ${sc[3]}`, 'Use <code>finally</code> for code that must always run, e.g. closing the file or printing a message', 'The program continues instead of crashing'],
-        model: 'Award 1 mark per point, up to 3.'
+        markscheme: [
+          { text: `Put the statement that might fail (e.g. <code>${esc(sc[1])}</code>) inside a <code>try</code> block`, why: 'It identifies the risky line and says what try does with it — describing, not just naming, the keyword.' },
+          { text: `Add an <code>except ${sc[2]}</code> block that handles the error, e.g. ${sc[3]}`, why: `It names the specific exception for this scenario and says what the program does instead of crashing.` },
+          { text: 'Use <code>finally</code> for code that must always run, e.g. closing the file or printing a message', why: 'It gives the purpose of finally — code that runs whether or not an exception happened.' },
+          { text: 'The program continues instead of crashing', why: 'It states the overall effect of exception handling, which "describe" questions often reward.' }],
+        model: 'Award 1 mark per point, up to 3.',
+        answer: `<p>The line that could fail, <code>${esc(sc[1])}</code>, goes inside a <code>try</code> block so Python attempts it but can catch any error. <span class="mk">[1]</span></p><p>An <code>except ${sc[2]}</code> block follows; if that error happens, the program can ${sc[3].replace(' / ', ' or ')} instead of crashing. <span class="mk">[1]</span></p><p>A <code>finally</code> block holds code that must run either way, such as closing a file or printing "Done". <span class="mk">[1]</span></p>`
       };
     } }
   ]);
@@ -548,7 +658,10 @@
         prompt: `This program should ${task}, but it gives the wrong result. Which line contains the error?`,
         code: buggy.join('\n'),
         options: [opt(`Line ${ln}`, true, `Line ${ln} is the bug: ${why}.`), ...others.map(i => opt(`Line ${i}`, false, `Line ${i} is correct — it ${desc[i - 1]}.`))],
-        check: { code: `import io, contextlib\ndef out(src):\n    b = io.StringIO()\n    with contextlib.redirect_stdout(b):\n        exec(src, {})\n    return b.getvalue()\nprint(out(${py.s(buggy.join('\n'))}) != out(${py.s(lines.join('\n'))}))`, expect: 'True' }
+        check: { code: `import io, contextlib\ndef out(src):\n    b = io.StringIO()\n    with contextlib.redirect_stdout(b):\n        exec(src, {})\n    return b.getvalue()\nprint(out(${py.s(buggy.join('\n'))}) != out(${py.s(lines.join('\n'))}))`, expect: 'True' },
+        steps: [`Write down what each line <em>should</em> do to ${task}: ${desc.map((d, i) => `line ${i + 1} ${d}`).join('; ')}.`,
+          'Compare each line with that job, or trace the program with a small example and see where the values first go wrong.',
+          `Line ${ln} doesn't do its job: ${why}.`]
       };
     } },
     { id: 'dbg-technique', kind: 'mcq', term: 'Identify', marks: 1, make(R) {
@@ -561,7 +674,10 @@
       const key = R.pick(Object.keys(T)), sc = R.pick(T[key][1]);
       return {
         prompt: `Which debugging technique is being used?<blockquote>${esc(sc)}</blockquote>`,
-        options: Object.keys(T).map(k => opt(k, k === key, k === key ? `Yes — this is ${T[k][0]}.` : `${k} means ${T[k][0]}.`))
+        options: Object.keys(T).map(k => opt(k, k === key, k === key ? `Yes — this is ${T[k][0]}.` : `${k} means ${T[k][0]}.`)),
+        steps: ['Ask: is a computer running the program, and if so, is it being paused?',
+          'On paper with no computer → trace table. Extra lines added to the code to show values → print statements. Stopping at a chosen line → breakpoints. Moving one line at a time → step-by-step execution.',
+          `Here the clue is ${T[key][0]}, so it is <strong>${key.toLowerCase()}</strong>.`]
       };
     } },
     { id: 'dbg-print', kind: 'output', term: 'State', marks: 2, make(R) {

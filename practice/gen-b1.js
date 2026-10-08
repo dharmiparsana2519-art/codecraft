@@ -25,7 +25,7 @@
         explain: P.list(chosen.map(x => `${C(x.line)} — ${x.why}`))
       };
     } },
-    { id: 'first-concepts', kind: 'mcq', term: 'Identify', marks: 1, make(R) {
+    { id: 'first-concepts', kind: 'mcq', term: 'Identify', marks: 1, derived: true, make(R) {
       const qs = [
         { prompt: 'Why can you write <code>total = 0</code> in Python without saying that <code>total</code> is an integer first?',
           ok: ['Python works out the data type from the value that is assigned', 'Python is dynamically typed: the variable takes the type of the value it holds.'],
@@ -69,7 +69,7 @@
   ];
   const VAGUE = ['The system should be easy to use.', 'Users should be happy with it.', 'It should work well.', 'It should be faster than the old way.', 'The design should look modern.'];
   P.add('B1.1.1', [
-    { id: 'spec-classify', kind: 'mcq', term: 'Identify', marks: 1, make(R) {
+    { id: 'spec-classify', kind: 'mcq', term: 'Identify', marks: 1, derived: true, make(R) {
       const s = R.pick(SPECS), key = R.pick(Object.keys(PARTS));
       const others = R.sample(Object.keys(PARTS).filter(k => k !== key), 3);
       return {
@@ -78,7 +78,7 @@
           ...others.map(k => ({ text: PARTS[k][0], why: `The ${PARTS[k][0].toLowerCase()} ${PARTS[k][1]}. This statement ${PARTS[key][1]} instead, so it is the ${PARTS[key][0].toLowerCase()}.` }))]
       };
     } },
-    { id: 'spec-which', kind: 'mcq', term: 'Identify', marks: 1, make(R) {
+    { id: 'spec-which', kind: 'mcq', term: 'Identify', marks: 1, derived: true, make(R) {
       const s = R.pick(SPECS), key = R.pick(Object.keys(PARTS));
       const others = R.sample(Object.keys(PARTS).filter(k => k !== key), 3);
       return {
@@ -87,7 +87,7 @@
           ...others.map(k => ({ text: s[k], why: `This is the ${PARTS[k][0].toLowerCase()}: it ${PARTS[k][1]}.` }))]
       };
     } },
-    { id: 'spec-measurable', kind: 'mcq', term: 'Identify', marks: 1, make(R) {
+    { id: 'spec-measurable', kind: 'mcq', term: 'Identify', marks: 1, derived: true, make(R) {
       const s = R.pick(SPECS), vague = R.sample(VAGUE, 2);
       return {
         prompt: `Which is the most suitable <strong>evaluation criterion</strong> for ${s.name}?`,
@@ -98,7 +98,7 @@
         ]
       };
     } },
-    { id: 'spec-construct', kind: 'written', term: 'Construct', marks: 6, make(R) {
+    { id: 'spec-construct', kind: 'written', term: 'Construct', marks: 6, derived: true, make(R) {
       const s = R.pick(SPECS);
       return {
         prompt: `Construct a problem specification for <strong>${s.name}</strong>. Include all six parts.`,
@@ -175,7 +175,7 @@
       algorithm: ['Define exact procedures, e.g. lock an account after 3 failed attempts', 'Specify the steps for responding to an incident', 'Design the step-by-step checks used for authentication or encryption'] }
   };
   P.add('B1.1.2-3', [
-    { id: 'ct-identify', kind: 'mcq', term: 'Identify', marks: 1, make(R) {
+    { id: 'ct-identify', kind: 'mcq', term: 'Identify', marks: 1, derived: true, make(R) {
       const [key, text] = R.pick(CT_SCENARIOS);
       return {
         prompt: `Which computational thinking concept is being applied?<blockquote>${esc(text)}</blockquote>`,
@@ -184,7 +184,7 @@
           : { text: CONCEPTS[k][0], why: `${CONCEPTS[k][0]} is ${CONCEPTS[k][1]}. That isn't the main idea here — this is ${CONCEPTS[key][0].toLowerCase()}: ${CONCEPTS[key][1]}.` })
       };
     } },
-    { id: 'ct-define', kind: 'mcq', term: 'Identify', marks: 1, make(R) {
+    { id: 'ct-define', kind: 'mcq', term: 'Identify', marks: 1, derived: true, make(R) {
       const key = R.pick(Object.keys(CONCEPTS)), phrase = R.pick(PHRASES[key]);
       return {
         prompt: `Which concept matches this description?<blockquote>${esc(phrase)}</blockquote>`,
@@ -193,7 +193,7 @@
           : { text: CONCEPTS[k][0], why: `${CONCEPTS[k][0]} means ${CONCEPTS[k][1]}.` })
       };
     } },
-    { id: 'ct-field', kind: 'written', term: 'Explain', marks: 3, make(R) {
+    { id: 'ct-field', kind: 'written', term: 'Explain', marks: 3, derived: true, make(R) {
       const field = R.pick(Object.keys(FIELDS)), key = R.pick(Object.keys(CONCEPTS));
       return {
         prompt: `Explain how <strong>${CONCEPTS[key][0].toLowerCase()}</strong> can be used to solve problems in <strong>${field}</strong>.`,
@@ -325,7 +325,7 @@
     line: ['Flowline (arrow)', 'shows the order in which the steps happen', []]
   };
   P.add('B1.1.4', [
-    { id: 'fc-symbol', kind: 'mcq', term: 'Identify', marks: 1, make(R) {
+    { id: 'fc-symbol', kind: 'mcq', term: 'Identify', marks: 1, derived: true, make(R) {
       const key = R.pick(['term', 'proc', 'io', 'dec']), ex = R.pick(SYMBOLS[key][2]);
       const others = R.sample(Object.keys(SYMBOLS).filter(k => k !== key), 3);
       const asExample = R.chance(0.6);

@@ -413,6 +413,8 @@ log.close()
       onCodeChange: code => { if (code === starter) delete P.code[id]; else P.code[id] = code; save(); },
       onRun: () => touchDay()
     });
+    // "Build it from scratch" notes: Run buttons, line-by-line steppers and live trace tables.
+    if (CodeCraft.notes && CodeCraft.notes.all[id]) CodeCraft.notes.hydrate($('#step-learn'), () => playground);
   }
 
   function toggleSection(l, key, btn) {

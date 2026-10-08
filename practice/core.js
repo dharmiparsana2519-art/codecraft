@@ -137,6 +137,27 @@ var CodeCraft = (typeof window !== 'undefined' ? (window.CodeCraft = window.Code
     const order = CC.allLessons ? CC.allLessons().map(l => l.id) : Object.keys(P.gens);
     return order.filter(id => P.gens[id] && P.gens[id].length);
   };
+  // Reasoning built from a question's own data, for generators marked derived: true. Multiple choice: an
+  // elimination walkthrough from each option's "why". Written: a note under each mark-scheme point, and a model
+  // answer made of the first points with their marks labelled.
+  const MARK_WHY = {
+    Construct: 'It is one of the required parts, present and relevant to this scenario — each part earns its own mark.',
+    Explain: 'It applies the idea to the context and says how it helps. "Explain" rewards reasons linked to the context, not just a definition.'
+  };
+  P.deriveReasoning = function (q, gen) {
+    const plain = t => String(t).replace(/^(Yes|Correct)\s*[—–-]\s*/, '').replace(/^./, c => c.toUpperCase());
+    const show = o => (q.mono ? `<code>${P.esc(o.text)}</code>` : `<b>${P.esc(o.text)}</b>`);
+    if (q.options && !q.steps) {
+      const ok = q.options.find(o => o.ok);
+      q.steps = ['Test each option against the question and rule out the ones that don\'t fit.',
+        ...q.options.filter(o => !o.ok).map(o => `Not ${show(o)}: ${o.why}`),
+        `That leaves ${show(ok)}. ${plain(ok.why)}`];
+    }
+    if (q.markscheme) {
+      q.markscheme = q.markscheme.map(m => (typeof m === 'string' ? { text: m, why: MARK_WHY[gen.term] || 'It is one of the points the mark scheme gives credit for.' } : m));
+      if (!q.answer) q.answer = q.markscheme.slice(0, gen.marks || 1).map(m => `<p>${m.text.replace(/\be\.g\.\s*/g, '')} <span class="mk">[1]</span></p>`).join('');
+    }
+  };
   P.generate = function (gen, seed) {
     const R = P.rng(seed);
     const q = gen.make(R);
@@ -145,6 +166,7 @@ var CodeCraft = (typeof window !== 'undefined' ? (window.CodeCraft = window.Code
       q.options = q.options.filter(o => o.ok || (!seen.has(String(o.text).trim()) && seen.add(String(o.text).trim())));
       if (!q.fixedOrder) q.options = R.shuffle(q.options);
     }
+    if (gen.derived) P.deriveReasoning(q, gen);
     return Object.assign({ topic: gen.topic, gen: gen.id, kind: gen.kind, term: gen.term || 'Answer', marks: gen.marks || 1, seed }, q);
   };
   // Next question for a topic: cycles through every generator in a shuffled order, avoiding recent repeats.

@@ -18,6 +18,36 @@ The learner is an IB DP2 student. Content must follow the official guide and the
 - Every quiz explains **why the right answer is right AND why each wrong option is wrong**.
 - Use real IB-style contexts (school records, exam scores, library books, queues at a canteen), never lorem ipsum.
 
+## RULE: Always teach the reasoning
+The learner must see *how to think*, not just the answer. This applies to everything added from now on.
+- **Every topic has "Build it from scratch" notes** (`content/notes/<lesson-id>.js`, shown in the Learn tab). For each main
+  program in the topic: (1) the goal in plain English, with input and output; (2) "Think before coding": 3–6 steps
+  and *why* the approach works; (3) the variables and data types needed, and why; (4) "Write it line by line": the
+  code growing one line at a time, each with "why this line?" and what goes wrong if it is missing or in the wrong
+  order; (5) a trace table on a small example; (6) 3–4 common mistakes — the wrong code, what it outputs, and why;
+  (7) a no-built-ins version (sum, len, max, min, sort, pop banned) explaining each change; (8) an exam tip on how
+  construct questions are usually marked. **Every code block must run in the site's editor**, including every stage
+  of the line-by-line build (a `pass` stands in for a block body not written yet). Format and renderer:
+  `widgets/notes.js`. Add each new notes file to the script lists in `index.html` and `tools/check.html`. Verify:
+  1. CPython: `osascript -l JavaScript tools/notes_export.js "$PWD" /tmp/notes.json && python3 tools/notes_check.py /tmp/notes.json`
+  2. Skulpt: the notes section of `tools/check.html` (runs every block and builds every trace table).
+- **Every practice question shows a "Reasoning" panel after answering, right or wrong:**
+  - Multiple choice: each option's `why` plus `steps` — a step-by-step "how to work it out".
+  - Predict the output / trace tables: the program runs line by line (`runner.trace` + `traceRows`) with the
+    variables changing; a wrong answer is compared with the right one, showing where they first differ and the line
+    that causes it. Needs an `explain`.
+  - Write the code: `think` (a "how to think about it" walkthrough), a `# note` on **every** solution line, and a
+    `diagnose` list — `{ match: <test-name regex>, when?: <student-code regex>, checks, cause }` — so a failing test
+    is explained in plain words with its most likely bug. Every test name must match some entry. Test names use
+    single quotes (from `py.s`), so match with `'`.
+  - Written: every mark-scheme point is `{ text, why }` ("why this earns the mark"), plus an `answer` — a full model
+    answer with the marks labelled `<span class="mk">[1]</span>`.
+  - Generators marked `derived: true` (some B1 ones) build their steps, "why" notes and model answer from their own
+    option and mark-scheme data (`P.deriveReasoning` in `practice/core.js`).
+- **Every model solution is explained line by line.**
+- `tools/verify.py` and `tools/check.html` fail any question that is missing its reasoning — run both before saying
+  a batch is done, and show the results.
+
 ## Tech stack (decided — don't change without asking)
 - Plain **HTML + CSS + vanilla JS**, no build step. Opens by double-clicking `index.html`; deployable to GitHub Pages.
 - Python runs in the browser with **Skulpt 1.2.0** (load `skulpt.min.js` + `skulpt-stdlib.js` from

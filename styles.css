@@ -805,3 +805,88 @@ code { font-family: var(--font-m); font-size: .88em; }
 .step-t { color: var(--ok); } .step-f { color: var(--bad); }
 .pg-step .step-bar { position: sticky; top: -10px; z-index: 2; background: var(--surface); padding: 2px 0 6px; margin-top: -2px; }
 .pg-step { padding-top: 10px; }
+
+/* ===== Visualizers (widgets/viz-*.js) ===== */
+.viz { margin: 16px 0 6px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); min-width: 0; }
+.viz-head h4 { margin: 2px 0 4px; font-family: var(--font-d); font-size: 16px; }
+.viz-head p { margin: 0 0 10px !important; font-size: 13.5px; color: var(--muted); max-width: 72ch; }
+.viz-tag { display: inline-flex; align-items: center; gap: 5px; font: 700 11px var(--font-m); letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+.viz-tag .ic { width: 13px; height: 13px; }
+.viz-controls, .viz-player { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 6px 0; }
+.viz-field { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.viz-field input[type=text], .viz-field input[type=number], .viz-field select { font: 13px var(--font-m); padding: 5px 7px; border-radius: 8px; border: 1px solid var(--border-2); background: var(--surface); color: var(--text); min-width: 0; }
+.viz-field input[type=number] { width: 4.5em; }
+.viz-field input[type=text] { width: 8em; }
+.viz-wide { flex: 1 1 260px; } .viz-wide input[type=text] { width: 100%; }
+.viz-check { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
+.viz-stage { margin: 10px 0 6px; overflow-x: auto; }
+.viz-say { margin: 6px 0 !important; font-size: 14px; line-height: 1.55; min-height: 1.5em; }
+.viz-bad { color: var(--bad); }
+.viz-state { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; margin-top: 8px; }
+.viz-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; color: var(--muted); width: 100%; margin-top: 4px; }
+.viz-legend .lg { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-2); margin-left: 6px; }
+.lg.live, .lg.in { background: color-mix(in srgb, var(--a1) 22%, var(--surface)); }
+.lg.ghost { background: var(--surface); border-style: dashed; }
+.lg.cmp { background: color-mix(in srgb, var(--a3) 45%, var(--surface)); }
+.lg.swap { background: color-mix(in srgb, var(--hl) 75%, var(--surface)); }
+.lg.done { background: var(--ok-bg); border-color: var(--ok); }
+.lg.min { background: var(--surface); border: 2px solid var(--a3); }
+.viz-idx { font: 11px var(--font-m); color: var(--faint); }
+.viz-val { font: 700 14px var(--font-m); color: var(--text); }
+.stack-col { display: inline-flex; flex-direction: column; gap: 4px; }
+.viz-slot { display: grid; grid-template-columns: 2.6em 7em auto; align-items: center; gap: 8px; }
+.viz-slot .viz-val, .viz-cell .viz-val { display: grid; place-items: center; min-height: 34px; border: 1px solid var(--border-2); border-radius: 8px; background: var(--surface); padding: 0 6px; }
+.viz-slot.live .viz-val, .viz-cell.live .viz-val, .viz-cell.in .viz-val { background: color-mix(in srgb, var(--a1) 22%, var(--surface)); border-color: color-mix(in srgb, var(--a1) 55%, transparent); }
+.viz-slot.ghost .viz-val, .viz-cell.ghost .viz-val { color: var(--faint); border-style: dashed; }
+.viz-slot.flash .viz-val, .viz-cell.flash .viz-val { box-shadow: 0 0 0 3px color-mix(in srgb, var(--hl) 70%, transparent); }
+.viz-ptr { font: 700 12.5px var(--font-m); color: var(--ink); }
+.queue-row, .bs-row { display: flex; gap: 4px; min-width: max-content; }
+.viz-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 3.2em; }
+.viz-cell .viz-val { width: 100%; }
+.viz-cell.out .viz-val { opacity: .35; }
+.viz-cell.mid .viz-val { border: 2px solid var(--a3); background: color-mix(in srgb, var(--a3) 22%, var(--surface)); }
+.viz-cell.found .viz-val { border: 2px solid var(--ok); background: var(--ok-bg); }
+.viz-marks { min-height: 18px; display: flex; gap: 2px; }
+.viz-mk { font: 700 10.5px var(--font-m); padding: 0 5px; border-radius: 5px; background: var(--surface); border: 1px solid var(--border-2); color: var(--text); }
+.viz-mk.front, .viz-mk.low { background: color-mix(in srgb, var(--a1) 25%, var(--surface)); }
+.viz-mk.rear, .viz-mk.high { background: color-mix(in srgb, var(--hl) 60%, var(--surface)); }
+.viz-mk.mid { background: color-mix(in srgb, var(--a3) 30%, var(--surface)); }
+.viz-counters { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.viz-count { font-size: 12.5px; padding: 3px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
+.viz-count b { font-family: var(--font-m); color: var(--ink); }
+.viz-speed input { width: 90px; }
+.viz-code { margin-top: 8px; }
+.viz-code > summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ink); }
+.viz-code .btn { margin-top: 8px; }
+.viz-table td code { font: 12.5px var(--font-m); }
+.sort-bars { display: flex; align-items: flex-end; gap: 4px; height: 180px; min-width: max-content; padding-top: 6px; }
+.sort-bar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 34px; gap: 2px; }
+.sort-fill { width: 100%; border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--a1) 35%, var(--surface)); border: 1px solid color-mix(in srgb, var(--a1) 55%, transparent); transition: height .25s; }
+.sort-bar.cmp .sort-fill { background: color-mix(in srgb, var(--a3) 55%, var(--surface)); border-color: var(--a3); }
+.sort-bar.swap .sort-fill { background: color-mix(in srgb, var(--hl) 80%, var(--surface)); border-color: color-mix(in srgb, var(--a2) 80%, #000 10%); }
+.sort-bar.done .sort-fill { background: var(--ok-bg); border-color: var(--ok); }
+.sort-bar.min .sort-fill { outline: 2px solid var(--a3); outline-offset: 1px; }
+.sort-v { font: 700 12px var(--font-m); color: var(--text); }
+/* Big O chart: validated categorical slots (light / dark) */
+.viz-bigo { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; }
+:root[data-mode=dark] .viz-bigo { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; }
+.viz-swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.viz-swatch.s1 { background: var(--s1); } .viz-swatch.s2 { background: var(--s2); } .viz-swatch.s3 { background: var(--s3); } .viz-swatch.s4 { background: var(--s4); }
+.bigo-chart { position: relative; margin: 8px 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.bigo-chart:focus-visible { outline: 2px solid var(--a1); outline-offset: 2px; }
+.bigo-chart svg { display: block; width: 100%; height: auto; }
+.bigo-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.bigo-line.s1, .bigo-dot.s1 { stroke: var(--s1); } .bigo-line.s2, .bigo-dot.s2 { stroke: var(--s2); } .bigo-line.s3, .bigo-dot.s3 { stroke: var(--s3); } .bigo-line.s4, .bigo-dot.s4 { stroke: var(--s4); }
+.bigo-dot { fill: var(--surface); stroke-width: 2; }
+.bigo-dot.s1 { fill: var(--s1); } .bigo-dot.s2 { fill: var(--s2); } .bigo-dot.s3 { fill: var(--s3); } .bigo-dot.s4 { fill: var(--s4); }
+.bigo-dot { stroke: var(--surface); }
+.bigo-grid { stroke: var(--border); stroke-width: 1; }
+.bigo-tick { font: 11px var(--font-m); fill: var(--faint); }
+.bigo-axis { font: 12px var(--font-b); fill: var(--muted); }
+.bigo-lab { font: 700 12px var(--font-m); fill: var(--text); }
+.bigo-cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.bigo-hit { fill: transparent; cursor: crosshair; }
+.bigo-tip { position: absolute; top: 8px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 2px; padding: 6px 9px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border-2); box-shadow: var(--shadow); font: 12px var(--font-m); color: var(--text); pointer-events: none; white-space: nowrap; }
+.bigo-legend { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--text); margin: 4px 0 8px; }
+.viz-field { max-width: 100%; min-width: 0; }
+.viz-field select { max-width: 12em; }

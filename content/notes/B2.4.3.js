@@ -1,5 +1,6 @@
 /* "Build it from scratch" notes — B2.4.3 Bubble sort and selection sort. Format: see widgets/notes.js. */
 CodeCraft.addNotes('B2.4.3', {
+  viz: ['sort'],
   intro: `<p>A <span class="term">bubble sort</span> walks along the list comparing <b>neighbours</b> and swapping any pair in the wrong order; each pass carries the largest remaining value to the end, like a bubble rising. A <span class="term">selection sort</span> finds the <b>smallest</b> remaining value and swaps it into the next position at the front, one position per pass.</p>
   <p>Both use a loop inside a loop, so both are <b>O(n²)</b> time; both sort <b>in place</b>, needing only a temporary variable for swaps, so <b>O(1)</b> space. Bubble sort can stop early when a pass makes no swaps — on nearly sorted data that's a big saving. Exams usually ban <code>sort()</code> and <code>sorted()</code>, so you must be able to write both.</p>`,
   programs: [

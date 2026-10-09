@@ -119,6 +119,11 @@ exercises, scan the student's code with a regex for banned names and fail with a
 - **Step mode** (`widgets/stepper.js`, the editor's Step button): records the program with `runner.trace`, then steps
   through the `traceRows` rows (so loops going round and if/while tests are steps), with a call split into "calls a
   function" / "the call returned". Breakpoints: click a line number (CodeMirror gutter `cc-bp`); Continue runs to one.
+- **Visualizers** (`widgets/viz-ds.js` stack + queue, `viz-algo.js` binary search + sorts, `viz-bigo.js` Big O chart):
+  shown in a lesson's Learn tab by its notes' `viz: [...]` field (B2.2.3, B2.2.4, B2.4.1, B2.4.2, B2.4.3). They take
+  the user's own data, follow the textbook algorithms exactly (array stack with topIndex, linear and circular queues),
+  and explain every step. `tools/check.html` re-checks their logic. The Big O chart's colours are validated categorical
+  slots (light + dark) — re-run the dataviz validator if you change them.
 - **Lesson tabs** (`widgets/lessonq.js`): every lesson's Try it = 3 code questions, Trace it = 2 trace/output questions,
   Check = 5 multiple-choice questions, drawn from that topic's generators (start-1 uses start-2's). A set is fixed by
   (lesson, tab, round) — "New questions" moves to the next round, stored in localStorage `codecraft.lessonq.v1` — and

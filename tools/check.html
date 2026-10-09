@@ -29,6 +29,9 @@
 <script src="../practice/gen-b3.js?fresh"></script>
 <script src="../practice/ui.js?fresh"></script>
 <script src="../widgets/stepper.js?fresh"></script>
+<script src="../widgets/viz-ds.js?fresh"></script>
+<script src="../widgets/viz-algo.js?fresh"></script>
+<script src="../widgets/viz-bigo.js?fresh"></script>
 <script src="../widgets/lessonq.js?fresh"></script>
 <script src="../widgets/notes.js?fresh"></script>
 <script src="../content/notes/B1.1.1.js?fresh"></script>
@@ -121,6 +124,27 @@
     while (panel.querySelector('[data-step=next]') && !panel.querySelector('[data-step=next]').disabled && guard++ < 200) panel.querySelector('[data-step=next]').click();
     if (con.textContent !== '5\ndone\n' || !/Finished/.test(panel.textContent)) problems.push(`step mode: expected output "5 done", got ${JSON.stringify(con.textContent)}`);
     counts.runs++; }
+  // Visualizers: their logic must match the textbook algorithms.
+  { const host = document.createElement('div'); document.body.appendChild(host); host.hidden = true;
+    const st = CodeCraft.viz.stack(host); host.querySelector('[data-size]').value = 3; st.reset();
+    ['a', 'b', 'c', 'd'].forEach(v => { host.querySelector('[data-val]').value = v; st.op('push'); }); st.op('pop');
+    let x = st.state(); if (x.top !== 1 || x.items.join() !== 'a,b,c') problems.push('stack visualizer: wrong state after 4 pushes into 3 slots and a pop');
+    const qu = CodeCraft.viz.queue(host); host.querySelector('[data-size]').value = 3; qu.setKind('circular');
+    ['a', 'b', 'c'].forEach(v => { host.querySelector('[data-val]').value = v; qu.op('enqueue'); }); qu.op('dequeue'); host.querySelector('[data-val]').value = 'd'; qu.op('enqueue');
+    x = qu.state(); if (x.rear !== 0 || x.front !== 1 || x.count !== 3 || x.items.join() !== 'd,b,c') problems.push('queue visualizer: circular wrap-round is wrong');
+    const bs = CodeCraft.viz.bsearch(host), so = CodeCraft.viz.sort(host);
+    for (let k = 0; k < 200; k++) {
+      const n = 2 + (k % 15), list = Array.from({ length: n }, () => Math.floor(Math.random() * 60)).sort((p, q) => p - q), t = Math.floor(Math.random() * 62);
+      const fr = bs.frames(list, t), last = fr[fr.length - 1];
+      let lo = 0, hi = n - 1, want = -1, checks = 0; while (lo <= hi) { const m = Math.floor((lo + hi) / 2); checks++; if (list[m] === t) { want = m; break; } if (list[m] < t) lo = m + 1; else hi = m - 1; }
+      if ((last.found === undefined ? -1 : last.found) !== want || last.checks !== checks) { problems.push(`binary search visualizer: ${JSON.stringify(list)} target ${t}`); break; }
+      const raw = Array.from({ length: n }, () => Math.floor(Math.random() * 90));
+      for (const alg of ['bubble', 'early', 'selection']) {
+        const f = so.frames(raw, alg), end = f[f.length - 1], sorted = raw.slice().sort((p, q) => p - q);
+        if (end.arr.join() !== sorted.join() || (alg !== 'early' && end.comps !== n * (n - 1) / 2)) { problems.push(`${alg} sort visualizer: ${JSON.stringify(raw)}`); break; }
+      }
+    }
+    CodeCraft.viz.bigo(host); host.remove(); counts.runs++; }
   // Lesson tabs: every lesson's Try it / Trace it / Check sets must be full (3 / 2 / 5) for several rounds.
   counts.sets = 0;
   for (const l of CodeCraft.allLessons()) {

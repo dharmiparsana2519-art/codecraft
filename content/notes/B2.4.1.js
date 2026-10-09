@@ -1,5 +1,6 @@
 /* "Build it from scratch" notes — B2.4.1 Big O. Format: see widgets/notes.js. */
 CodeCraft.addNotes('B2.4.1', {
+  viz: ['bigo'],
   intro: `<p><span class="term">Big O</span> describes how the work an algorithm does grows as the size of its input, <em>n</em>, grows. It ignores small details and keeps the shape: <b>O(1)</b> constant (the same work for any n), <b>O(log n)</b> logarithmic (n is halved each step), <b>O(n)</b> linear (one pass through the data), <b>O(n²)</b> quadratic (a loop over the data inside another).</p>
   <p><b>Time complexity</b> is about the number of steps; <b>space complexity</b> is about the extra memory. The way to see them is to <b>count operations</b> — so that's what the programs below do.</p>`,
   programs: [

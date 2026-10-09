@@ -1,5 +1,6 @@
 /* "Build it from scratch" notes — B2.4.2 Linear and binary search. Format: see widgets/notes.js. */
 CodeCraft.addNotes('B2.4.2', {
+  viz: ['bsearch'],
   intro: `<p>A <span class="term">linear search</span> checks items one by one from the start until it finds the target or runs out. It works on <b>any</b> list, sorted or not, and takes up to n comparisons: O(n).</p>
   <p>A <span class="term">binary search</span> needs a <b>sorted</b> list. It looks at the middle item and throws away the half that can't contain the target, again and again — so it takes about log₂ n comparisons: O(log n). Think of a phone book: it's sorted by name, so you can find a <b>name</b> by opening it in the middle, but to find who owns a <b>number</b> you'd have to read every entry.</p>`,
   programs: [

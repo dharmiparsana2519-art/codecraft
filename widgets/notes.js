@@ -2,7 +2,7 @@
    A lesson's notes file, content/notes/<lesson id>.js, calls CodeCraft.addNotes(id, notes) and the notes become
    that lesson's Learn section.
 
-   notes = { intro: html, programs: [program, …] }
+   notes = { intro: html, viz: [names of CodeCraft.viz visualizers to show after the intro], programs: [program, …] }
    program = {
      title, goal: html, input: html, output: html,        1. the goal in plain English
      think: [html], works: html,                           2. think before coding, and why the approach works
@@ -164,7 +164,8 @@ window.CodeCraft = window.CodeCraft || {};
   function render(id) {
     const N = NOTES[id];
     const toc = `<nav class="nt-toc" aria-label="Programs in these notes"><p class="nt-help">Build it from scratch — ${N.programs.length} programs, each written one line at a time:</p><ol>${N.programs.map((p, i) => `<li><a href="#nt-${esc(id)}-${i + 1}" data-nt-jump>${p.title}</a></li>`).join('')}</ol></nav>`;
-    return `<div class="notes">${N.intro || ''}${toc}${N.programs.map((p, i) => renderProgram(p, i, id)).join('')}</div>`;
+    const viz = (N.viz || []).map(v => `<div class="nt-viz" data-viz="${esc(v)}"></div>`).join('');
+    return `<div class="notes">${N.intro || ''}${viz}${toc}${N.programs.map((p, i) => renderProgram(p, i, id)).join('')}</div>`;
   }
 
   /* ---------- trace tables, built live from the tracer (runner.trace + traceRows) ---------- */
@@ -270,6 +271,11 @@ window.CodeCraft = window.CodeCraft || {};
       }
       const jump = e.target.closest('[data-nt-jump]');
       if (jump) { e.preventDefault(); const t = document.querySelector(jump.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+    // Visualizers (widgets/viz-*.js); "Run them in the editor" loads their Python into the editor.
+    el.querySelectorAll('[data-viz]').forEach(host => {
+      const make = CC.viz && CC.viz[host.dataset.viz];
+      if (make && !host.firstChild) make(host, { load(code) { const pg = getPlayground(); if (pg) { pg.setCode(code); pg.run(); const dock = document.getElementById('dock'); if (dock) dock.scrollIntoView({ behavior: 'smooth', block: 'start' }); } } });
     });
     // Trace tables one at a time (the Python engine runs one program at a time).
     (async () => {

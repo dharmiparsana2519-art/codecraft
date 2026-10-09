@@ -1,5 +1,6 @@
 /* "Build it from scratch" notes — B2.2.4 Queues (FIFO). Format: see widgets/notes.js. */
 CodeCraft.addNotes('B2.2.4', {
+  viz: ['queue'],
   intro: `<p>A <span class="term">queue</span> is a <b>FIFO</b> structure — <b>F</b>irst <b>I</b>n, <b>F</b>irst <b>O</b>ut — like the canteen line: people join at the <b>rear</b> and are served from the <b>front</b>. IB's operations are <b>enqueue</b> (add at the rear), <b>dequeue</b> (remove and return the front item), <b>front</b> (look at the front item without removing it) and <b>isEmpty</b>; the fixed-size version also has <b>isFull</b>.</p>
   <p>Queues are used for print queues, task scheduling and anything served in arrival order. The array version keeps two indexes, <code>frontIndex</code> and <code>rearIndex</code>. Program 1 shows its weakness; program 2, the <b>circular queue</b>, fixes it.</p>`,
   programs: [

@@ -1,5 +1,6 @@
 /* "Build it from scratch" notes — B2.2.3 Stacks (LIFO). Format: see widgets/notes.js. */
 CodeCraft.addNotes('B2.2.3', {
+  viz: ['stack'],
   intro: `<p>A <span class="term">stack</span> is a <b>LIFO</b> structure — <b>L</b>ast <b>I</b>n, <b>F</b>irst <b>O</b>ut — like a pile of trays in the canteen: you can only add to the top or take from the top. The operations IB uses are <b>push</b> (add to the top), <b>pop</b> (remove and return the top item), <b>peek</b> (look at the top item without removing it) and <b>isEmpty</b>. The fixed-size version also has <b>isFull</b>.</p>
   <p>Pushing onto a full stack is a <b>stack overflow</b>; popping from an empty one is a <b>stack underflow</b>. Stacks are behind a browser's Back button, "undo" in an editor, and checking that brackets match. The textbook builds a stack from a <b>fixed-size array</b> with a <code>topIndex</code>, so that comes first; the Python-list version follows.</p>`,
   programs: [

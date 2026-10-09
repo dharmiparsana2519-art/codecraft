@@ -422,6 +422,53 @@ log.close()
     }));
   }
 
+  /* Review module pages (widgets/review.js): full width, no editor dock. Each page is one "learn" section, ticked by
+     its button or automatically (a full mixed set answered, a mock fully marked, the dashboard opened). */
+  function reviewCtx() {
+    return {
+      modules: COURSE.modules, isDone, status, topicStat, practiceTotals, weakestTopics, history: H, href,
+      recordResult, lastAnswer: q => { const it = H.items[qid(q)]; return it ? it.attempts[it.attempts.length - 1] : null; },
+      markDone: id => {
+        const r = rec(id); if (r.sec.learn) return;
+        const l = CodeCraft.findLesson(id), btn = $('.rv-mark');
+        r.sec.learn = true; touchDay(); save(); renderChips(); renderSidebar(route.lessonId);
+        if (btn) { btn.classList.add('done'); btn.setAttribute('aria-pressed', 'true'); btn.innerHTML = ICON('check') + 'Done'; }
+        if (id !== 'review-3') toast(`${CodeCraft.lessonLabel(l)} complete — nice work!`);
+      }
+    };
+  }
+  function renderReviewPage(id) {
+    const l = CodeCraft.findLesson(id), m = l.module, idx = LESSONS.findIndex(x => x.id === id);
+    const prev = LESSONS[idx - 1], next = LESSONS[idx + 1], r = rec(id);
+    r.seen = Date.now(); P.last = id; save();
+    openMods.add(m.id);
+    $('#crumbs').innerHTML = '';
+    $('#main').innerHTML = `
+      <article class="lesson rv-page" aria-labelledby="lessonTitle">
+        <header class="lesson-head">
+          <div class="tags"><span class="tag">${ICON('book')}Review · Theme B</span><span class="tag tag-sl">SL</span>
+            <button class="btn sm mark rv-mark${r.sec.learn ? ' done' : ''}" type="button" aria-pressed="${!!r.sec.learn}">${r.sec.learn ? ICON('check') + 'Done' : 'Mark as done'}</button></div>
+          <h1 class="lesson-title" id="lessonTitle"><em>${esc(l.title)}</em></h1>
+          <p class="lede">${esc(l.blurb)}</p>
+          <ol class="lpath" aria-label="Lessons in this module">${m.lessons.map(x => `<li class="${x.id === id ? 'cur' : status(x.id) === 'done' ? 'done' : ''}"><a href="${href(x.id)}"${x.id === id ? ' aria-current="page"' : ''}><i></i>${esc(CodeCraft.lessonLabel(x))}</a></li>`).join('')}</ol>
+        </header>
+        <div id="rvHost"></div>
+        <nav class="lesson-nav" aria-label="Previous and next lesson">
+          ${prev ? `<a class="card prev" href="${href(prev.id)}"><span>${ICON('left')}Previous</span><b>${esc(CodeCraft.lessonLabel(prev))}</b></a>` : ''}
+          ${next ? `<a class="card next" href="${href(next.id)}"><span>Next${ICON('arrow')}</span><b>${esc(CodeCraft.lessonLabel(next))}</b></a>` : ''}
+        </nav>
+      </article>`;
+    $('.rv-mark').addEventListener('click', e => {
+      const b = e.currentTarget, wasDone = isDone(id);
+      r.sec.learn = !r.sec.learn; if (r.sec.learn) touchDay(); save();
+      b.classList.toggle('done', r.sec.learn); b.setAttribute('aria-pressed', r.sec.learn);
+      b.innerHTML = r.sec.learn ? ICON('check') + 'Done' : 'Mark as done';
+      renderChips(); renderSidebar(route.lessonId);
+      if (!wasDone && isDone(id)) { confetti(b); toast(`${CodeCraft.lessonLabel(l)} complete — nice work!`); }
+    });
+    current = CodeCraft.review.render(id, $('#rvHost'), reviewCtx());
+  }
+
   function toggleSection(l, key, btn) {
     const r = rec(l.id), wasDone = isDone(l.id);
     r.sec[key] = !r.sec[key];
@@ -812,8 +859,15 @@ log.close()
     } else if (m) {
       const id = decodeURIComponent(m[1]);
       route.lessonId = id;
-      document.body.dataset.screen = 'lesson';
-      renderLesson(id);
+      if (CodeCraft.review && CodeCraft.review.has(id)) {
+        if (playground) { playground.destroy(); playground = null; }
+        if (stepObserver) stepObserver.disconnect();
+        document.body.dataset.screen = 'home';
+        renderReviewPage(id);
+      } else {
+        document.body.dataset.screen = 'lesson';
+        renderLesson(id);
+      }
       $('#main').scrollTop = 0;
       const l = CodeCraft.findLesson(id);
       document.title = (l ? CodeCraft.lessonLabel(l) + ' · ' : '') + 'CodeCraft';

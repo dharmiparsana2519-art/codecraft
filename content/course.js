@@ -132,13 +132,13 @@ CodeCraft.course = {
       id: 'm9', num: 9, ref: 'Review', title: 'Review', page: null,
       lessons: [
         { id: 'review-1', ref: 'Review', title: 'Mixed exam practice',
-          blurb: 'Exam-style trace, construct, describe and compare questions with mark-scheme feedback.',
-          must: ['Trace tables', '"Construct a program" questions', '"Describe" and "compare" questions', 'Mark-scheme-style feedback'] },
-        { id: 'review-2', ref: 'Review', title: 'Paper 2 sprint',
-          blurb: '10 random questions across every module, against the clock.',
-          must: ['10 random questions across all modules', 'Timed'] },
+          blurb: 'Ten exam-style questions from every SL topic — multiple choice, trace tables, construct and written answers — each marked with its reasoning.',
+          must: ['Trace tables', '"Construct a program" questions', '"Describe" and "state" questions', 'Mark-scheme-style feedback'] },
+        { id: 'review-2', ref: 'Review', title: 'Paper 2 mock',
+          blurb: 'A timed Paper 2: three structured questions, 50 marks, 1 hour 15 minutes — then marked part by part.',
+          must: ['Three structured questions: algorithms, arrays, a class', '1 hour 15 minutes, 50 marks', 'Marked against a mark scheme'] },
         { id: 'review-3', ref: 'Review', title: 'Progress dashboard',
-          blurb: 'See what you have finished, your quiz scores and your weakest topics.',
+          blurb: 'Your completion per module, accuracy per topic and per type of question, weakest topics and mock results.',
           must: ['Percent complete per module', 'Weakest topics', 'Quiz scores'] }
       ]
     }

@@ -5,6 +5,7 @@
      opts.files                 { name: text } pre-loaded into the virtual file system
      opts.execLimit             ms of run time before TimeLimitError (default 3000)
    CodeCraft.runner.stop()         stops the current run
+   Runs and traces never overlap: a call waits until the one before it has finished (see exclusive below).
    CodeCraft.runner.explain(err)   beginner-friendly explanation for an error object from run() */
 window.CodeCraft = window.CodeCraft || {};
 
@@ -111,7 +112,7 @@ window.CodeCraft = window.CodeCraft || {};
     return { type, message, line };
   }
 
-  async function run(code, opts = {}) {
+  async function runNow(code, opts = {}) {
     if (typeof Sk === 'undefined') {
       return { ok: false, error: { type: 'Offline', message: 'The Python engine (Skulpt) did not load. Check your internet connection and reload the page.', line: null }, files: opts.files || {}, ms: 0 };
     }
@@ -204,7 +205,7 @@ window.CodeCraft = window.CodeCraft || {};
     }
     return out;
   }
-  async function trace(code, opts = {}) {
+  async function traceNow(code, opts = {}) {
     if (typeof Sk === 'undefined') return { ok: false, error: { type: 'Offline', message: 'Python engine not loaded', line: null }, output: '', steps: [], final: {} };
     const job = { stopped: false, rejectInput: null, waited: 0 };
     current = job;
@@ -313,6 +314,14 @@ window.CodeCraft = window.CodeCraft || {};
     }
     return rows;
   }
+
+  /* One program at a time. Skulpt's configuration (output, input, debugger) is global, and run/trace await between
+     configuring it and running the student's program — so overlapping calls (e.g. several question cards replaying
+     saved answers at once) would send one program's output to another's collector. Calls queue up instead. */
+  let queue = Promise.resolve();
+  const exclusive = fn => { const p = queue.then(fn, fn); queue = p.then(() => {}, () => {}); return p; };
+  const run = (code, opts) => exclusive(() => runNow(code, opts));
+  const trace = (code, opts) => exclusive(() => traceNow(code, opts));
 
   function stopError() { const e = new Error('stopped'); e.codecraftStopped = true; return e; }
 

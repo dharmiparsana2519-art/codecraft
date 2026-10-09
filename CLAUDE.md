@@ -67,6 +67,9 @@ The learner must see *how to think*, not just the answer. This applies to everyt
   than the yield interval returns garbage, and `x = f()` leaves `x` undefined). `tools/check.html` tests for this.
   `execLimit` turns infinite loops into a `TimeLimitError` instead of freezing the tab — show a friendly message
   that links to B2.3.1 ("ways to avoid infinite loops").
+- **One program at a time:** Skulpt's configuration is global, so `runner.run` / `runner.trace` queue up (never overlap).
+  Without the queue, cards replaying saved answers at the same moment swapped each other's output. `tools/check.html`
+  tests overlapping runs. A playground program waiting for `input()` holds the queue until it gets an answer or stops.
 - **Missing in Skulpt:** writing files (`open(..., "w")` throws) and `FileNotFoundError`.
   Fix: `runtime/vfs_preamble.py` (tested) defines an in-memory file system. Before each run, execute it as module
   `_pre`, then copy `m.$d.open` and `m.$d.FileNotFoundError` into `Sk.builtins`. Pre-load lesson files by setting
@@ -134,6 +137,23 @@ exercises, scan the student's code with a regex for banned names and fail with a
   question, so **never change what an existing generator produces for a given seed without giving it a new `id`** —
   otherwise old history entries show a different question. `ans` is replayed by `practiceUI.render(..., { replay })`.
   Routes: `#/review?topic=&status=wrong|right&kind=`, `#/review/q/<topic|gen|seed>`, `#/review/redo?topic=`.
+- **Review module** (module 9, `widgets/review.js`; `app.js` renders these lessons as full-width pages with no editor,
+  each counting as one section):
+  - `review-1` Mixed exam practice — 10 questions per round from the SL topics (2 mcq, 3 trace/output, 3 code,
+    2 written, each from the least-used topic), mounted with `lessonQs.mount(..., { tab, questions })`, recorded like
+    any practice answer.
+  - `review-2` Paper 2 mock — `practice/mock-q12.js` + `mock-q3.js` + `mock.js`: Paper A and Paper B, each Q1 [14]
+    flowchart→code, Big O, a file algorithm, a trace table; Q2 [16] parallel arrays + a 2D list; Q3 [20] a class (UML,
+    object, method, instance/class variables, the counter, `__`, a list of objects). 1 h 15 min, 50 marks, no recursion.
+    The structure follows the learner's school half-yearly Paper 2, but **every question is original — never copy the
+    school's papers into this (public) repo.** Each part is also a generator under topic `'mock'` (not a lesson id, so it
+    stays out of practice pages and lesson tabs), so `verify.py` and `check.html` check it; `mock.build(paper, seed)`
+    builds a paper whose parts share one seeded context per question. During the exam there is no Run button; the clock
+    pauses when the page is left. Marking: code by hidden tests (full marks only when all pass, otherwise in proportion;
+    −1 for a banned built-in or a missing required call), output exact, trace cells in proportion, written self-marked;
+    then every part is shown with its Reasoning panel. Stored in localStorage `codecraft.mock.v1` = `{ cur, attempts }`.
+  - `review-3` Progress dashboard — completion per module, accuracy per topic and per question type, weakest topics,
+    mock results; single-hue bars with every value written next to its bar.
 
 ## Deployment
 - Live at **https://dharmiparsana2519-art.github.io/codecraft/** — GitHub repo `dharmiparsana2519-art/codecraft`,

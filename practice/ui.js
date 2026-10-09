@@ -362,5 +362,5 @@ window.CodeCraft = window.CodeCraft || {};
     return { el: card, destroy() { if (extraCleanup) extraCleanup(); card.remove(); }, get done() { return done; } };
   }
 
-  CC.practiceUI = { render, codeBlock, annotated, traceView, highlight };
+  CC.practiceUI = { render, codeBlock, annotated, traceView, highlight, normOut, normCell };
 })(window.CodeCraft);

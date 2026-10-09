@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body data-screen="home">
 
@@ -48,6 +48,8 @@
   <symbol id="i-quiz" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></symbol>
   <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1V16h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3z"/></symbol>
   <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
   <symbol id="i-infinity" viewBox="0 0 24 24"><path d="M7.5 8.5C4.5 8.5 3 10.2 3 12s1.5 3.5 4.5 3.5c3.5 0 5.5-7 9-7 3 0 4.5 1.7 4.5 3.5s-1.5 3.5-4.5 3.5c-3.5 0-5.5-7-9-7z"/></symbol>
 </svg>
 
@@ -99,52 +101,56 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
 <!-- CodeCraft -->
-<script src="runtime/vfs_preamble.js?v=14"></script>
-<script src="content/course.js?v=14"></script>
-<script src="runner.js?v=14"></script>
-<script src="widgets/playground.js?v=14"></script>
-<script src="widgets/stepper.js?v=14"></script>
-<script src="widgets/viz-ds.js?v=14"></script>
-<script src="widgets/viz-algo.js?v=14"></script>
-<script src="widgets/viz-bigo.js?v=14"></script>
+<script src="runtime/vfs_preamble.js?v=15"></script>
+<script src="content/course.js?v=15"></script>
+<script src="runner.js?v=15"></script>
+<script src="widgets/playground.js?v=15"></script>
+<script src="widgets/stepper.js?v=15"></script>
+<script src="widgets/viz-ds.js?v=15"></script>
+<script src="widgets/viz-algo.js?v=15"></script>
+<script src="widgets/viz-bigo.js?v=15"></script>
 <!-- Unlimited practice: question engine, generators for every topic, question cards -->
-<script src="practice/core.js?v=14"></script>
-<script src="practice/gen-b1.js?v=14"></script>
-<script src="practice/gen-b21.js?v=14"></script>
-<script src="practice/gen-b22.js?v=14"></script>
-<script src="practice/gen-b23.js?v=14"></script>
-<script src="practice/gen-b24.js?v=14"></script>
-<script src="practice/gen-b3.js?v=14"></script>
-<script src="practice/ui.js?v=14"></script>
+<script src="practice/core.js?v=15"></script>
+<script src="practice/gen-b1.js?v=15"></script>
+<script src="practice/gen-b21.js?v=15"></script>
+<script src="practice/gen-b22.js?v=15"></script>
+<script src="practice/gen-b23.js?v=15"></script>
+<script src="practice/gen-b24.js?v=15"></script>
+<script src="practice/gen-b3.js?v=15"></script>
+<script src="practice/mock-q12.js?v=15"></script>
+<script src="practice/mock-q3.js?v=15"></script>
+<script src="practice/mock.js?v=15"></script>
+<script src="practice/ui.js?v=15"></script>
 <!-- "Build it from scratch" notes (the Learn section of each lesson) -->
-<script src="widgets/lessonq.js?v=14"></script>
-<script src="widgets/notes.js?v=14"></script>
-<script src="content/notes/B1.1.1.js?v=14"></script>
-<script src="content/notes/B1.1.2-3.js?v=14"></script>
-<script src="content/notes/B1.1.4.js?v=14"></script>
-<script src="content/notes/B2.1.1.js?v=14"></script>
-<script src="content/notes/B2.1.2.js?v=14"></script>
-<script src="content/notes/B2.1.3.js?v=14"></script>
-<script src="content/notes/B2.1.4.js?v=14"></script>
-<script src="content/notes/B2.2.1.js?v=14"></script>
-<script src="content/notes/B2.2.2.js?v=14"></script>
-<script src="content/notes/B2.2.3.js?v=14"></script>
-<script src="content/notes/B2.2.4.js?v=14"></script>
-<script src="content/notes/B2.3.1.js?v=14"></script>
-<script src="content/notes/B2.3.2.js?v=14"></script>
-<script src="content/notes/B2.3.3.js?v=14"></script>
-<script src="content/notes/B2.3.4.js?v=14"></script>
-<script src="content/notes/B2.4.1.js?v=14"></script>
-<script src="content/notes/B2.4.2.js?v=14"></script>
-<script src="content/notes/B2.4.3.js?v=14"></script>
-<script src="content/notes/B2.5.1.js?v=14"></script>
-<script src="content/notes/B3.1.1.js?v=14"></script>
-<script src="content/notes/B3.1.2.js?v=14"></script>
-<script src="content/notes/B3.1.3.js?v=14"></script>
-<script src="content/notes/B3.1.4.js?v=14"></script>
-<script src="content/notes/B3.1.5.js?v=14"></script>
-<script src="content/notes/start-1.js?v=14"></script>
-<script src="content/notes/start-2.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="widgets/lessonq.js?v=15"></script>
+<script src="widgets/review.js?v=15"></script>
+<script src="widgets/notes.js?v=15"></script>
+<script src="content/notes/B1.1.1.js?v=15"></script>
+<script src="content/notes/B1.1.2-3.js?v=15"></script>
+<script src="content/notes/B1.1.4.js?v=15"></script>
+<script src="content/notes/B2.1.1.js?v=15"></script>
+<script src="content/notes/B2.1.2.js?v=15"></script>
+<script src="content/notes/B2.1.3.js?v=15"></script>
+<script src="content/notes/B2.1.4.js?v=15"></script>
+<script src="content/notes/B2.2.1.js?v=15"></script>
+<script src="content/notes/B2.2.2.js?v=15"></script>
+<script src="content/notes/B2.2.3.js?v=15"></script>
+<script src="content/notes/B2.2.4.js?v=15"></script>
+<script src="content/notes/B2.3.1.js?v=15"></script>
+<script src="content/notes/B2.3.2.js?v=15"></script>
+<script src="content/notes/B2.3.3.js?v=15"></script>
+<script src="content/notes/B2.3.4.js?v=15"></script>
+<script src="content/notes/B2.4.1.js?v=15"></script>
+<script src="content/notes/B2.4.2.js?v=15"></script>
+<script src="content/notes/B2.4.3.js?v=15"></script>
+<script src="content/notes/B2.5.1.js?v=15"></script>
+<script src="content/notes/B3.1.1.js?v=15"></script>
+<script src="content/notes/B3.1.2.js?v=15"></script>
+<script src="content/notes/B3.1.3.js?v=15"></script>
+<script src="content/notes/B3.1.4.js?v=15"></script>
+<script src="content/notes/B3.1.5.js?v=15"></script>
+<script src="content/notes/start-1.js?v=15"></script>
+<script src="content/notes/start-2.js?v=15"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

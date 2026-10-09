@@ -4,7 +4,8 @@
    A set is fixed by (lesson, tab, round): the same questions come back on a later visit, already marked if you
    answered them; "New questions" moves to the next round.
    CodeCraft.lessonQs.config(id)                      → { try, trace, check } for lessons that have questions
-   CodeCraft.lessonQs.mount(el, id, key, { onResult(q, res), lastAnswer(q) })   renders one tab's set into el */
+   CodeCraft.lessonQs.mount(el, id, key, { onResult(q, res), lastAnswer(q) })   renders one tab's set into el
+   Other sets (review-1's mixed exam practice) pass their own { tab, questions(round), more, newLabel, marks, onProgress }. */
 window.CodeCraft = window.CodeCraft || {};
 
 (function (CC) {
@@ -53,24 +54,28 @@ window.CodeCraft = window.CodeCraft || {};
   }
 
   function mount(el, id, key, opts = {}) {
-    if (!el || !TABS[key]) return;
-    const tab = TABS[key];
+    if (!el || !(opts.tab || TABS[key])) return;
+    const tab = opts.tab || TABS[key];
     let cards = [];
     const draw = () => {
       cards.forEach(c => c.destroy && c.destroy());
       cards = [];
-      const qs = questions(id, key, round(id, key)), answered = new Set();
+      const qs = opts.questions ? opts.questions(round(id, key)) : questions(id, key, round(id, key)), answered = new Set(), got = {};
       el.innerHTML = `<div class="lq">
         <div class="lq-head">
           <p class="lq-help">${tab.help}</p>
           <div class="lq-bar"><span class="lq-score" aria-live="polite"></span>
-            <button class="btn sm" type="button" data-lq-new>${ICON('reset')}New questions</button></div>
+            <button class="btn sm" type="button" data-lq-new>${ICON('reset')}${opts.newLabel || 'New questions'}</button></div>
         </div>
         <ol class="lq-list">${qs.map((q, i) => `<li class="lq-item" data-i="${i}"><div class="lq-num">Question ${i + 1} of ${qs.length}</div><div class="lq-card"></div></li>`).join('')}</ol>
-        <p class="lq-more"><a class="mini-link" href="#/practice/${encodeURIComponent(POOL[id] || id)}">${ICON('infinity')}Want more? Unlimited practice on this topic →</a></p>
+        <p class="lq-more">${opts.more != null ? opts.more : `<a class="mini-link" href="#/practice/${encodeURIComponent(POOL[id] || id)}">${ICON('infinity')}Want more? Unlimited practice on this topic →</a>`}</p>
       </div>`;
       const score = el.querySelector('.lq-score'), right = new Set();
-      const showScore = () => { score.textContent = `${answered.size} of ${qs.length} answered${answered.size ? ` · ${right.size} correct` : ''}`; };
+      const showScore = () => {
+        const marks = opts.marks && answered.size ? ` · ${[...answered].reduce((a, i) => a + (got[i] || 0), 0)} / ${[...answered].reduce((a, i) => a + qs[i].marks, 0)} marks` : '';
+        score.textContent = `${answered.size} of ${qs.length} answered${answered.size ? ` · ${right.size} correct` : ''}${marks}`;
+        if (opts.onProgress) opts.onProgress(answered.size, qs.length);
+      };
       const renderCard = (i, fresh) => {
         const q = qs[i], host = el.querySelector(`.lq-item[data-i="${i}"] .lq-card`);
         if (cards[i]) cards[i].destroy();
@@ -79,10 +84,10 @@ window.CodeCraft = window.CodeCraft || {};
         if (last && last.ans) {
           // Replaying a saved answer marks the card again — that must not be recorded a second time.
           cards[i] = CC.practiceUI.render(host, q, () => {}, { replay: last.ans, banner: `${ICON('history')}Your answer from before — ${last.ok ? 'correct' : `${last.score} / ${last.max}`}. <button class="link-btn" type="button" data-lq-retry="${i}">Try it again</button>` });
-          answered.add(i); if (last.ok) right.add(i); else right.delete(i);
+          answered.add(i); got[i] = last.score || 0; if (last.ok) right.add(i); else right.delete(i);
         } else {
           cards[i] = CC.practiceUI.render(host, q, res => {
-            answered.add(i); if (res.ok) right.add(i); else right.delete(i);
+            answered.add(i); got[i] = res.score || 0; if (res.ok) right.add(i); else right.delete(i);
             showScore();
             if (opts.onResult) opts.onResult(q, res);
           });

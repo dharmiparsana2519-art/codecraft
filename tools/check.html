@@ -27,12 +27,16 @@
 <script src="../practice/gen-b23.js?fresh"></script>
 <script src="../practice/gen-b24.js?fresh"></script>
 <script src="../practice/gen-b3.js?fresh"></script>
+<script src="../practice/mock-q12.js?fresh"></script>
+<script src="../practice/mock-q3.js?fresh"></script>
+<script src="../practice/mock.js?fresh"></script>
 <script src="../practice/ui.js?fresh"></script>
 <script src="../widgets/stepper.js?fresh"></script>
 <script src="../widgets/viz-ds.js?fresh"></script>
 <script src="../widgets/viz-algo.js?fresh"></script>
 <script src="../widgets/viz-bigo.js?fresh"></script>
 <script src="../widgets/lessonq.js?fresh"></script>
+<script src="../widgets/review.js?fresh"></script>
 <script src="../widgets/notes.js?fresh"></script>
 <script src="../content/notes/B1.1.1.js?fresh"></script>
 <script src="../content/notes/B1.1.2-3.js?fresh"></script>
@@ -160,6 +164,36 @@
       }
     }
   }
+  // Engine: overlapping runs (several cards replaying saved answers at once) must each get their own output.
+  { const outs = ['', '', ''], progs = ['print("a")\nprint(1 + 1)', 'x = [3, 1, 2]\nprint(sorted(x))', 'for i in range(3):\n    print(i)'];
+    const res = await Promise.all([...progs.map((p, i) => CodeCraft.runner.run(p, { onOutput: t => { outs[i] += t; } })), CodeCraft.runner.trace('y = 5\nprint(y * 2)', {})]);
+    const want = ['a\n2\n', '[1, 2, 3]\n', '0\n1\n2\n'];
+    outs.forEach((o, i) => { if (o !== want[i]) problems.push(`engine: overlapping run ${i + 1} printed ${JSON.stringify(o)}, expected ${JSON.stringify(want[i])}`); });
+    if (res[3].output !== '10\n') problems.push(`engine: a trace overlapping other runs printed ${JSON.stringify(res[3].output)}`);
+    counts.runs += 4; }
+  // Review: mixed exam practice sets (2 multiple choice, 3 trace/output, 3 code, 2 written, from the SL topics).
+  for (let r = 0; r < 8; r++) {
+    const qs = CodeCraft.review.mixedSet(r), k = kinds => qs.filter(q => kinds.includes(q.kind)).length;
+    if (qs.length !== 10 || k(['mcq']) !== 2 || k(['trace', 'output']) !== 3 || k(['code']) !== 3 || k(['written']) !== 2) problems.push(`review-1 round ${r}: wrong mix ${qs.map(q => q.kind).join(',')}`);
+    if (qs.some(q => /^start-|^mock$/.test(q.topic))) problems.push(`review-1 round ${r}: a question from outside the SL topics`);
+    if (new Set(qs.map(q => q.gen)).size !== qs.length) problems.push(`review-1 round ${r}: the same generator twice`);
+    counts.sets++;
+  }
+  // Review: the Paper 2 mock. Both papers are 14 + 16 + 20 = 50 marks; perfect answers get full marks and blank
+  // answers get 0 from the auto-marker; every written part can reach full marks on its mark scheme.
+  counts.mock = 0;
+  for (const paperId of Object.keys(P.mock.PAPERS)) for (let s = 0; s < Math.max(2, Math.ceil(n / 5)); s++) {
+    const paper = P.mock.build(paperId, (Math.imul(s + 1, 2654435761) + 31) >>> 0), where = `mock ${paperId} seed ${paper.seed}`;
+    if (paper.total !== 50 || paper.questions.map(Q => Q.marks).join() !== '14,16,20') problems.push(`${where}: marks ${paper.questions.map(Q => Q.marks).join('+')} = ${paper.total}`);
+    for (const q of paper.questions.flatMap(Q => Q.parts)) {
+      if (q.kind === 'written') { if (q.markscheme.length < q.marks) problems.push(`${where} ${q.key}: ${q.markscheme.length} mark-scheme points for ${q.marks} marks`); continue; }
+      const perfect = q.kind === 'code' ? stripNotes(q.solution) : q.kind === 'output' ? q.answer : { cells: CodeCraft.review.traceExpect(q) };
+      const full = await CodeCraft.review.autoMark(q, perfect), none = await CodeCraft.review.autoMark(q, q.kind === 'code' ? q.starter : q.kind === 'output' ? '' : { cells: [] });
+      if (full.score !== q.marks) problems.push(`${where} ${q.key}: a perfect answer scored ${full.score} / ${q.marks} (${full.note})`);
+      if (none.score !== 0) problems.push(`${where} ${q.key}: a blank answer scored ${none.score}`);
+      counts.mock++;
+    }
+  }
   // "Build it from scratch" notes: every code block (finished programs, every stage of the line-by-line build,
   // mistakes, no-built-ins versions) must do what the notes say, and every trace table must build.
   counts.notes = 0;
@@ -193,7 +227,7 @@
   await CodeCraft.runner.run(await (await fetch('floatfuzz.py')).text(), { onOutput: t => { fout += t; }, execLimit: 20000 });
   fout.trim().split('\n').forEach((line, i) => { if (line !== want[i]) problems.push(`floats line ${i + 1}: Python ${want[i]} | site ${line}`); });
   counts.runs++;
-  const summary = `${counts.reasoning} questions checked for reasoning, ${counts.traces} line-by-line runs and trace tables, ${counts.runs} answer runs, ${counts.notes} notes code blocks, ${counts.sets} lesson question sets`;
+  const summary = `${counts.reasoning} questions checked for reasoning, ${counts.traces} line-by-line runs and trace tables, ${counts.runs} answer runs, ${counts.notes} notes code blocks, ${counts.sets} lesson and review question sets, ${counts.mock} mock parts auto-marked`;
   document.getElementById('status').innerHTML = problems.length ? `<b class="bad">${problems.length} problem(s)</b> — ${summary}` : `<b class="ok">All match ✓</b> — ${summary}`;
   document.getElementById('out').textContent = problems.join('\n');
   window.checkDone = { problems: problems.length, ...counts };

@@ -10,7 +10,7 @@ function read(path) {
 function run(argv) {
   const root = argv[0], per = parseInt(argv[1] || '25', 10), out = argv[2];
   const names = ObjC.deepUnwrap($.NSFileManager.defaultManager.contentsOfDirectoryAtPathError(root + '/practice', null))
-    .filter(n => /^gen-.*\.js$/.test(n)).sort();
+    .filter(n => /^(gen|mock)[-.].*js$/.test(n)).sort((a, b) => (a.startsWith('gen') !== b.startsWith('gen') ? (a.startsWith('gen') ? -1 : 1) : a < b ? -1 : a > b ? 1 : 0));
   (0, eval)(read(root + '/practice/core.js'));
   names.forEach(n => (0, eval)(read(root + '/practice/' + n)));
   const P = CodeCraft.practice, questions = [], errors = [];

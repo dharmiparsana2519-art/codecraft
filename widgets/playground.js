@@ -7,7 +7,9 @@
      onCodeChange(code),       called (debounced) while typing — use it to save drafts
      onRun(result)             called after every run with { ok, error, files, ms }
    });
-   pg.getCode(), pg.setCode(code), pg.setFiles(files), pg.run(), pg.destroy() */
+   pg.getCode(), pg.setCode(code), pg.setFiles(files), pg.run(), pg.destroy()
+   Step mode (widgets/stepper.js): the Step button runs the program line by line; clicking a line number sets a
+   breakpoint for Continue. */
 window.CodeCraft = window.CodeCraft || {};
 
 (function () {
@@ -34,6 +36,7 @@ window.CodeCraft = window.CodeCraft || {};
         </div>
         <div class="pg-actions">
           <button class="btn sm" data-act="reset" title="Go back to the starting code (Ctrl+Z undoes this)">${ICON('reset')}Reset</button>
+          <button class="btn sm" data-act="step" title="Step through the program one line at a time">${ICON('step')}Step</button>
           <button class="btn sm primary" data-act="run" title="Run (Ctrl+Enter)">${ICON('play')}<span>Run</span></button>
         </div>
       </div>
@@ -41,6 +44,7 @@ window.CodeCraft = window.CodeCraft || {};
         <div class="pg-editor"></div>
         <div class="pg-files" hidden></div>
       </div>
+      <div class="pg-step" hidden></div>
       <div class="pg-console">
         <div class="con-head">Console
           <button class="con-clear" data-act="clear">Clear</button>
@@ -55,7 +59,9 @@ window.CodeCraft = window.CodeCraft || {};
     const runBtn = $('[data-act=run]');
 
     /* ---------- editor (CodeMirror 5, or a textarea if the CDN is unreachable) ---------- */
-    let cm = null, ta = null, saveTimer = null;
+    let cm = null, ta = null, saveTimer = null, stepping = null;
+    const bpHandles = new Set();
+    const breakpoints = () => new Set([...bpHandles].map(h => (cm ? cm.getLineNumber(h) : null)).filter(n => n !== null).map(n => n + 1));
     const changedCode = () => {
       clearErrLine();
       if (!opts.onCodeChange) return;
@@ -67,7 +73,7 @@ window.CodeCraft = window.CodeCraft || {};
         value: opts.code != null ? opts.code : starter,
         mode: { name: 'python', version: 3 },
         lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false, matchBrackets: true,
-        lineWrapping: false, viewportMargin: 50,
+        lineWrapping: false, viewportMargin: 50, gutters: ['CodeMirror-linenumbers', 'cc-bp'],
         extraKeys: {
           Tab: c => c.somethingSelected() ? c.indentSelection('add') : c.replaceSelection('    ', 'end'),
           'Shift-Tab': c => c.indentSelection('subtract'),
@@ -75,6 +81,12 @@ window.CodeCraft = window.CodeCraft || {};
         }
       });
       cm.on('change', changedCode);
+      // Breakpoints: click a line number (or the margin beside it) to toggle a red dot.
+      cm.on('gutterClick', (c, line) => {
+        const h = c.getLineHandle(line), info = c.lineInfo(h);
+        if (info.gutterMarkers && info.gutterMarkers['cc-bp']) { c.setGutterMarker(h, 'cc-bp', null); bpHandles.delete(h); }
+        else { const dot = document.createElement('span'); dot.className = 'cc-bp-dot'; dot.title = 'Breakpoint'; c.setGutterMarker(h, 'cc-bp', dot); bpHandles.add(h); }
+      });
     } else {
       ta = document.createElement('textarea');
       ta.className = 'pg-textarea'; ta.spellcheck = false; ta.setAttribute('aria-label', 'Python code');
@@ -92,6 +104,7 @@ window.CodeCraft = window.CodeCraft || {};
     }
     function getCode() { return cm ? cm.getValue() : ta.value; }
     function setCode(code) {
+      if (stepping) stepping.exit();
       if (cm) cm.replaceRange(code, { line: 0, ch: 0 }, { line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length });
       else { ta.value = code; }
       changedCode();
@@ -205,7 +218,30 @@ window.CodeCraft = window.CodeCraft || {};
     }
 
     /* ---------- run ---------- */
+    /* ---------- step mode ---------- */
+    function step() {
+      if (stepping || running || !CodeCraft.stepper) return;
+      if (CodeCraft.runner.running) CodeCraft.runner.stop();
+      showView('code'); clearConsole(); clearErrLine();
+      if (cm) cm.setOption('readOnly', true); else ta.readOnly = true;
+      root.classList.add('is-stepping');
+      runBtn.disabled = true;
+      stepBtn.innerHTML = `${ICON('x')}Exit step`;
+      stepping = CodeCraft.stepper.start({
+        panel: $('.pg-step'), cm, getCode, getFiles: () => files, consoleEl: con, setStatus, breakpoints,
+        onExit() {
+          stepping = null;
+          if (cm) cm.setOption('readOnly', false); else ta.readOnly = false;
+          root.classList.remove('is-stepping');
+          runBtn.disabled = false;
+          stepBtn.innerHTML = `${ICON('step')}Step`;
+          setStatus('', 'Ready');
+        }
+      });
+    }
+
     async function run() {
+      if (stepping) return;
       if (running) { CodeCraft.runner.stop(); return; }
       if (CodeCraft.runner.running) CodeCraft.runner.stop(); // another playground is mid-run
       showView('code');
@@ -228,6 +264,8 @@ window.CodeCraft = window.CodeCraft || {};
     }
 
     runBtn.addEventListener('click', run);
+    const stepBtn = $('[data-act=step]');
+    stepBtn.addEventListener('click', () => (stepping ? stepping.exit() : step()));
     $('[data-act=reset]').addEventListener('click', () => { setCode(starter); setStatus('', 'Code reset — Ctrl+Z to undo'); if (cm) cm.focus(); });
     $('[data-act=clear]').addEventListener('click', () => { if (!running) { clearConsole(); setStatus('', 'Ready'); } });
     renderFiles();
@@ -237,7 +275,7 @@ window.CodeCraft = window.CodeCraft || {};
       // Replace the virtual files (e.g. when the notes load a program that reads scores.txt); Reset files returns to these.
       setFiles(f) { startFiles = Object.assign({}, f || {}); files = Object.assign({}, startFiles); changed = new Set(); openFile = Object.keys(files)[0] || null; renderFiles(); },
       refresh() { if (cm) cm.refresh(); },
-      destroy() { if (running) CodeCraft.runner.stop(); clearTimeout(saveTimer); if (opts.onCodeChange) opts.onCodeChange(getCode()); root.remove(); }
+      destroy() { if (stepping) stepping.exit(); if (running) CodeCraft.runner.stop(); clearTimeout(saveTimer); if (opts.onCodeChange) opts.onCodeChange(getCode()); root.remove(); }
     };
   };
 })();

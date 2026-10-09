@@ -28,6 +28,7 @@
 <script src="../practice/gen-b24.js?fresh"></script>
 <script src="../practice/gen-b3.js?fresh"></script>
 <script src="../practice/ui.js?fresh"></script>
+<script src="../widgets/stepper.js?fresh"></script>
 <script src="../widgets/lessonq.js?fresh"></script>
 <script src="../widgets/notes.js?fresh"></script>
 <script src="../content/notes/B1.1.1.js?fresh"></script>
@@ -111,6 +112,15 @@
       counts.reasoning++;
     }
   }
+  // Step mode: stepping through a program to the end must reproduce its output, including loops and a function call.
+  { const code = 'def total(xs):\n    t = 0\n    for x in xs:\n        t = t + x\n    return t\n\nfor n in [1, 2]:\n    if n > 1:\n        print(total([n, 3]))\nprint("done")';
+    const panel = document.createElement('div'), con = document.createElement('div');
+    CodeCraft.stepper.start({ panel, cm: null, getCode: () => code, getFiles: () => ({}), consoleEl: con, setStatus() {}, breakpoints: () => new Set(), onExit() {} });
+    for (let i = 0; i < 50 && !panel.querySelector('[data-step=cont]'); i++) await new Promise(r => setTimeout(r, 50));
+    let guard = 0;
+    while (panel.querySelector('[data-step=next]') && !panel.querySelector('[data-step=next]').disabled && guard++ < 200) panel.querySelector('[data-step=next]').click();
+    if (con.textContent !== '5\ndone\n' || !/Finished/.test(panel.textContent)) problems.push(`step mode: expected output "5 done", got ${JSON.stringify(con.textContent)}`);
+    counts.runs++; }
   // Lesson tabs: every lesson's Try it / Trace it / Check sets must be full (3 / 2 / 5) for several rounds.
   counts.sets = 0;
   for (const l of CodeCraft.allLessons()) {

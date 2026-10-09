@@ -1,7 +1,7 @@
 /* "Build it from scratch" notes — B2.1.4 Debugging. Format: see widgets/notes.js. */
 CodeCraft.addNotes('B2.1.4', {
   intro: `<p>A <span class="term">bug</span> is a mistake that makes a program crash or give the wrong result. <b>Syntax errors</b> stop it starting; <b>runtime errors</b> crash it while it runs; <b>logic errors</b> are the sneaky ones — it runs, but the answer is wrong.</p>
-  <p>Three ways to find a logic error: a <b>trace table</b> (work through the code by hand, writing down each variable as it changes), <b>print-statement debugging</b> (temporary <code>print</code> lines that show values as the program runs), and <b>breakpoints</b> with step-by-step execution (pause before a line and inspect the variables — the trace tables on this site work the same way). The programs below are correct; the "common mistakes" are the bugs these techniques catch.</p>`,
+  <p>Three ways to find a logic error: a <b>trace table</b> (work through the code by hand, writing down each variable as it changes), <b>print-statement debugging</b> (temporary <code>print</code> lines that show values as the program runs), and <b>breakpoints</b> with step-by-step execution (pause before a line and inspect the variables). Try that in the editor: press <b>Step</b> to run a program one line at a time with its variables in a table, click a line number to set a breakpoint, and press <b>Continue</b> to run on to it. The programs below are correct; the "common mistakes" are the bugs these techniques catch.</p>`,
   programs: [
     {
       title: 'Find the lowest mark — with a debug print',

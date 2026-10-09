@@ -1,6 +1,6 @@
 /* "Build it from scratch" notes — start-1 How CodeCraft works. Format: see widgets/notes.js. */
 CodeCraft.addNotes('start-1', {
-  intro: `<p>Every lesson has the <span class="term">editor</span> on the right (below the notes on a phone). Press <b>Run</b> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> and the program's output appears in the <b>console</b> underneath. When a program calls <code>input()</code>, a box appears in the console: type your answer and press <kbd>Enter</kbd>. Files that programs read or write live in the <b>Files</b> tab — they are kept in the page, not on your computer.</p>
+  intro: `<p>Every lesson has the <span class="term">editor</span> on the right (below the notes on a phone). Press <b>Run</b> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> and the program's output appears in the <b>console</b> underneath. When a program calls <code>input()</code>, a box appears in the console: type your answer and press <kbd>Enter</kbd>. Files that programs read or write live in the <b>Files</b> tab — they are kept in the page, not on your computer. <b>Step</b> runs a program one line at a time and shows its variables changing — the best way to see what your code really does.</p>
   <p>Every code block in these notes has a <b>Run</b> button that loads it into the editor. The Try it tab's questions are marked by <b>hidden tests</b>, and program 2 shows exactly how that works.</p>`,
   programs: [
     {

@@ -116,6 +116,9 @@ exercises, scan the student's code with a regex for banned names and fail with a
   1. CPython: `osascript -l JavaScript tools/export.js "$PWD" 100 /tmp/q.json && python3 tools/verify.py /tmp/q.json`
   2. Skulpt (what the site runs): `python3 tools/serve.py`, open `http://localhost:8765/tools/check.html?n=25`.
 - Stats live in localStorage under `practice[topic] = { n, c, s, m }` (answered, correct, marks scored, marks possible).
+- **Step mode** (`widgets/stepper.js`, the editor's Step button): records the program with `runner.trace`, then steps
+  through the `traceRows` rows (so loops going round and if/while tests are steps), with a call split into "calls a
+  function" / "the call returned". Breakpoints: click a line number (CodeMirror gutter `cc-bp`); Continue runs to one.
 - **Lesson tabs** (`widgets/lessonq.js`): every lesson's Try it = 3 code questions, Trace it = 2 trace/output questions,
   Check = 5 multiple-choice questions, drawn from that topic's generators (start-1 uses start-2's). A set is fixed by
   (lesson, tab, round) — "New questions" moves to the next round, stored in localStorage `codecraft.lessonq.v1` — and

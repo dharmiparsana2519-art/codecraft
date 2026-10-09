@@ -1,7 +1,8 @@
 /* "Build it from scratch" notes — B3.1.5 Encapsulation. Format: see widgets/notes.js. */
 CodeCraft.addNotes('B3.1.5', {
   intro: `<p><span class="term">Encapsulation</span> means bundling an object's data with the methods that use it, and restricting direct access to that data. <b>Information hiding</b> is the idea behind it: other code only sees what an object can <em>do</em> (its public methods), not how it stores its data.</p>
-  <p>In Python, an attribute whose name starts with two underscores, like <code>self.__balance</code>, is <b>private</b>: code outside the class can't reach it. Outside code uses public methods instead — a <b>getter</b> to read the value and a <b>setter</b> (or methods like <code>deposit</code>) to change it. Because every change goes through a method, the method can <b>validate</b> it, so the object's state always stays sensible.</p>`,
+  <p>In Python, an attribute whose name starts with two underscores, like <code>self.__balance</code>, is <b>private</b>: code outside the class can't reach it. Outside code uses public methods instead — a <b>getter</b> to read the value and a <b>setter</b> (or methods like <code>deposit</code>) to change it. Because every change goes through a method, the method can <b>validate</b> it, so the object's state always stays sensible.</p>
+  <p>Python makes an attribute private by <b>name mangling</b>: inside the class, <code>self.__balance</code> is quietly renamed <code>_BankAccount__balance</code>, so <code>account.__balance</code> fails from outside but <code>account._BankAccount__balance</code> still works — privacy in Python is a strong convention rather than a lock. The exam point about encapsulation is the same: keep the data private and give access only through public methods.</p>`,
   programs: [
     {
       title: 'A bank account that protects its balance',

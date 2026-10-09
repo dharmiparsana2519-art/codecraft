@@ -176,7 +176,7 @@ code { font-family: var(--font-m); font-size: .88em; }
 .lpath i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--border-2); flex: none; }
 .lpath .done a { color: var(--muted); } .lpath .done i { background: var(--ok); border-color: var(--ok); }
 .lpath .cur a { color: var(--text); } .lpath .cur i { background: var(--a1); border-color: var(--a1); box-shadow: 0 0 0 4px color-mix(in srgb, var(--a1) 25%, transparent); }
-.steps { display: flex; gap: 4px; padding: 5px; margin: 24px 0 6px; border: 1px solid var(--border); border-radius: var(--pill); background: var(--top-bg); position: sticky; top: -12px; z-index: 10; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); width: max-content; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.steps { display: flex; gap: 4px; padding: 5px; margin: 24px 0 6px; border: 1px solid var(--border); border-radius: var(--pill); background: var(--surface); box-shadow: var(--shadow); position: sticky; top: -12px; z-index: 10; width: max-content; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .st { display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 7px; border: 0; border-radius: 9px; background: none; color: var(--muted); font-weight: 700; font-size: 14px; white-space: nowrap; }
 .st:hover { color: var(--text); }
 .st-n { width: 23px; height: 23px; border-radius: 50%; display: grid; place-items: center; font-size: 11.5px; font-family: var(--font-m); background: var(--surface-2); border: 1px solid var(--border); }
@@ -752,3 +752,10 @@ code { font-family: var(--font-m); font-size: .88em; }
 .nt-chart { margin: 14px 0; overflow-x: auto; text-align: center; }
 .nt-chart .flowchart { max-width: 100%; height: auto; }
 .nt-spec th { width: 1%; white-space: nowrap; text-align: left; vertical-align: top; text-transform: none; letter-spacing: 0; font: 700 13px var(--font-b); color: var(--ink); background: var(--surface-2); border-bottom: 1px solid var(--border); }
+
+/* Notes at phone width: grid/flex children must be allowed to shrink, so long code lines scroll inside their own
+   box (.q-code has overflow-x: auto) instead of stretching the page. */
+.nt-mistakes { grid-template-columns: minmax(0, 1fr); }
+.nt-prog, .nt-mis, .nt-bstep, .nt-build, .nt-final, .nt-tracebox, .nt-tip > div, .nt-res > span, .nt-io > div { min-width: 0; }
+.nt-res > span, .nt-bk, .nt-mis h5, .nt-typed, .nt-io dd { overflow-wrap: anywhere; }
+.nt-res pre { overflow-x: auto; }

@@ -61,10 +61,10 @@ The learner must see *how to think*, not just the answer. This applies to everyt
 - Works: f-strings, slicing, string methods, try/except/finally, `except ValueError as e`, classes, `__init__`,
   `__str__`, `@staticmethod`, name-mangled `self.__name` (raises AttributeError from outside), 2D lists,
   `global`, `input()`, `list.pop(0)`, `range` with step.
-- Configure: `Sk.configure({ output, read, inputfun, inputfunTakesPrompt: true, __future__: Sk.python3, execLimit: 3000, yieldLimit: null })`.
+- Configure: `Sk.configure({ output, read, inputfun, inputfunTakesPrompt: true, __future__: Sk.python3, execLimit: 3000, yieldLimit: null })`
+  and run with `Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true))`.
   **Never set a `yieldLimit`:** Skulpt 1.2.0 loses a function's work if it yields mid-call (a function running longer
   than the yield interval returns garbage, and `x = f()` leaves `x` undefined). `tools/check.html` tests for this.
-  and run with `Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true))`.
   `execLimit` turns infinite loops into a `TimeLimitError` instead of freezing the tab — show a friendly message
   that links to B2.3.1 ("ways to avoid infinite loops").
 - **Missing in Skulpt:** writing files (`open(..., "w")` throws) and `FileNotFoundError`.
@@ -93,7 +93,8 @@ exercises, scan the student's code with a regex for banned names and fail with a
   toggling back to the device's own mode returns to following the device.
 - **Layouts:** Home = **sidebar layout** (course tree on the left, dashboard on the right).
   Lesson = **split IDE layout** (lesson on the left, editor + console pinned on the right; course tree in a drawer;
-  stacks on phones). Must work at phone width with visible keyboard focus.
+  stacks on phones). Must work at phone width with visible keyboard focus: at 390px no lesson may be wider than the
+  screen — code scrolls inside its own box. Grid/flex children that hold code need `min-width: 0`.
 
 ## Unlimited practice (`#/practice`)
 - `practice/core.js` is the engine; `practice/gen-*.js` hold the generators for each syllabus section; `practice/ui.js`

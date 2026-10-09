@@ -28,6 +28,7 @@
 <script src="../practice/gen-b24.js?fresh"></script>
 <script src="../practice/gen-b3.js?fresh"></script>
 <script src="../practice/ui.js?fresh"></script>
+<script src="../widgets/lessonq.js?fresh"></script>
 <script src="../widgets/notes.js?fresh"></script>
 <script src="../content/notes/B1.1.1.js?fresh"></script>
 <script src="../content/notes/B1.1.2-3.js?fresh"></script>
@@ -53,6 +54,8 @@
 <script src="../content/notes/B3.1.3.js?fresh"></script>
 <script src="../content/notes/B3.1.4.js?fresh"></script>
 <script src="../content/notes/B3.1.5.js?fresh"></script>
+<script src="../content/notes/start-1.js?fresh"></script>
+<script src="../content/notes/start-2.js?fresh"></script>
 <script>
 (async () => {
   const P = CodeCraft.practice, n = +(new URLSearchParams(location.search).get('n') || 10);
@@ -108,6 +111,21 @@
       counts.reasoning++;
     }
   }
+  // Lesson tabs: every lesson's Try it / Trace it / Check sets must be full (3 / 2 / 5) for several rounds.
+  counts.sets = 0;
+  for (const l of CodeCraft.allLessons()) {
+    const cfg = CodeCraft.lessonQs.config(l.id);
+    if (!cfg) { if (!/^review-/.test(l.id)) problems.push(`lesson ${l.id}: no question tabs`); continue; }
+    for (const key of ['try', 'trace', 'check']) {
+      if (!cfg[key]) { problems.push(`lesson ${l.id}: no ${key} questions`); continue; }
+      for (let r = 0; r < 4; r++) {
+        const qs = CodeCraft.lessonQs.questions(l.id, key, r), want = cfg[key].n;
+        if (qs.length !== want) problems.push(`lesson ${l.id} ${key} round ${r}: ${qs.length} of ${want} questions`);
+        if (qs.some(q => !cfg[key].kinds.includes(q.kind))) problems.push(`lesson ${l.id} ${key} round ${r}: wrong kind of question`);
+        counts.sets++;
+      }
+    }
+  }
   // "Build it from scratch" notes: every code block (finished programs, every stage of the line-by-line build,
   // mistakes, no-built-ins versions) must do what the notes say, and every trace table must build.
   counts.notes = 0;
@@ -141,7 +159,7 @@
   await CodeCraft.runner.run(await (await fetch('floatfuzz.py')).text(), { onOutput: t => { fout += t; }, execLimit: 20000 });
   fout.trim().split('\n').forEach((line, i) => { if (line !== want[i]) problems.push(`floats line ${i + 1}: Python ${want[i]} | site ${line}`); });
   counts.runs++;
-  const summary = `${counts.reasoning} questions checked for reasoning, ${counts.traces} line-by-line runs and trace tables, ${counts.runs} answer runs, ${counts.notes} notes code blocks`;
+  const summary = `${counts.reasoning} questions checked for reasoning, ${counts.traces} line-by-line runs and trace tables, ${counts.runs} answer runs, ${counts.notes} notes code blocks, ${counts.sets} lesson question sets`;
   document.getElementById('status').innerHTML = problems.length ? `<b class="bad">${problems.length} problem(s)</b> — ${summary}` : `<b class="ok">All match ✓</b> — ${summary}`;
   document.getElementById('out').textContent = problems.join('\n');
   window.checkDone = { problems: problems.length, ...counts };

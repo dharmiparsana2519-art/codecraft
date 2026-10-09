@@ -116,6 +116,11 @@ exercises, scan the student's code with a regex for banned names and fail with a
   1. CPython: `osascript -l JavaScript tools/export.js "$PWD" 100 /tmp/q.json && python3 tools/verify.py /tmp/q.json`
   2. Skulpt (what the site runs): `python3 tools/serve.py`, open `http://localhost:8765/tools/check.html?n=25`.
 - Stats live in localStorage under `practice[topic] = { n, c, s, m }` (answered, correct, marks scored, marks possible).
+- **Lesson tabs** (`widgets/lessonq.js`): every lesson's Try it = 3 code questions, Trace it = 2 trace/output questions,
+  Check = 5 multiple-choice questions, drawn from that topic's generators (start-1 uses start-2's). A set is fixed by
+  (lesson, tab, round) — "New questions" moves to the next round, stored in localStorage `codecraft.lessonq.v1` — and
+  answers are recorded like any practice answer and shown again on a later visit. **Every topic needs at least one
+  `code`, one `output`/`trace` and one `mcq` generator**; `tools/check.html` fails any lesson whose sets aren't full.
 - **My questions (`#/review`)**: every practice answer is saved in localStorage key `codecraft.history.v1` as
   `{ topic, gen, seed, kind, term, marks, preview, attempts: [{ t, ok, score, max, ans }] }`. The seed rebuilds the exact
   question, so **never change what an existing generator produces for a given seed without giving it a new `id`** —

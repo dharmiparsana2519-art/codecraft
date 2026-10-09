@@ -759,3 +759,15 @@ code { font-family: var(--font-m); font-size: .88em; }
 .nt-prog, .nt-mis, .nt-bstep, .nt-build, .nt-final, .nt-tracebox, .nt-tip > div, .nt-res > span, .nt-io > div { min-width: 0; }
 .nt-res > span, .nt-bk, .nt-mis h5, .nt-typed, .nt-io dd { overflow-wrap: anywhere; }
 .nt-res pre { overflow-x: auto; }
+
+/* ===== Lesson tabs filled with practice questions (widgets/lessonq.js) ===== */
+.lq-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin: 0 0 10px; }
+.lq-help { margin: 0; font-size: 14px; color: var(--muted); max-width: 62ch; }
+.lq-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lq-score { font: 700 12.5px var(--font-m); color: var(--ink); }
+.lq-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.lq-item { min-width: 0; }
+.lq-num { font: 700 11.5px var(--font-m); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 0 0 6px 2px; }
+.lq-card .q-card { margin: 0; }
+.lq-more { margin: 14px 0 0; }
+.link-btn { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--ink); text-decoration: underline; cursor: pointer; }

@@ -693,4 +693,64 @@
       };
     } }
   ]);
+
+  /* ===== Lesson tabs (Try it): fix-the-bug code questions for B2.1.4 ===== */
+  P.add('B2.1.4', [
+    { id: 'dbg-fix', kind: 'code', term: 'Construct', marks: 3, make(R) {
+      const v = R.int(0, 3), lists = Array.from({ length: 3 }, () => R.ints(R.int(4, 6), 35, 98));
+      const intro = goal => `This function is meant to ${goal}, but it has <b>one bug</b>. Find it — run it on a small example, or trace it — and fix it.`;
+      if (v === 0) return {
+        prompt: intro('return the lowest mark in the list (without <code>min</code>)'),
+        starter: 'def lowest(marks):\n    low = 0\n    for m in marks:\n        if m < low:\n            low = m\n    return low\n',
+        solution: 'def lowest(marks):  # a non-empty list of marks\n    low = marks[0]  # FIX: start with a real mark — starting at 0, no mark is ever lower\n    for m in marks:  # compare every mark\n        if m < low:  # lower than the lowest so far?\n            low = m  # remember it\n    return low  # the lowest mark\n',
+        think: ['Test it on a small example: for [64, 81, 47] it should give 47. What does it give? (0.)', 'Trace it: <code>low</code> starts at 0, and no mark is below 0, so the <code>if</code> is never True. The bug is the starting value.', 'Start with the first mark instead: <code>low = marks[0]</code>.'],
+        diagnose: [
+          { match: '.', when: '^\\s*low\\s*=\\s*0\\s*$', checks: 'the lowest mark', cause: 'The bug is still there: <code>low = 0</code> is lower than every mark, so it never changes. Start with <code>marks[0]</code>.' },
+          { match: '.', checks: 'the lowest mark', cause: 'Start <code>low</code> at <code>marks[0]</code> and keep the <code>if m &lt; low</code> test.' }],
+        tests: lists.map(l => P.t(`lowest(${py.r(l)}) is ${Math.min(...l)}`, `lowest(${py.r(l)})`, Math.min(...l))).join('\n'),
+        banned: P.ban('min', 'sorted', 'sort'), hint: 'What is low before the loop? Can any mark be lower than that?'
+      };
+      if (v === 1) {
+        const ns = [4, 1, 0, R.int(5, 12)], f = n => (n * (n + 1)) / 2;
+        return {
+          prompt: intro('add up the whole numbers from 1 to n (e.g. 1 + 2 + 3 + 4 = 10)'),
+          starter: 'def sum_to(n):\n    total = 0\n    i = 1\n    while i < n:\n        total = total + i\n        i = i + 1\n    return total\n',
+          solution: 'def sum_to(n):  # add 1 + 2 + … + n\n    total = 0  # running total\n    i = 1  # the first number to add\n    while i <= n:  # FIX: <= so that n itself is added\n        total = total + i  # add this number\n        i = i + 1  # move on to the next one\n    return total  # 1 + 2 + … + n\n',
+          think: ['Try n = 4: it should give 10. It gives 6 — so 4 is missing.', 'Trace the condition: when i is 4, <code>4 &lt; 4</code> is False, so the loop stops one pass early — an <b>off-by-one error</b>.', 'Use <code>&lt;=</code> so the last value is included.'],
+          diagnose: [
+            { match: '.', when: 'while\\s+i\\s*<\\s*n', checks: 'that n itself is added', cause: 'The bug is still there: <code>i &lt; n</code> stops before adding n. Use <code>i &lt;= n</code>.' },
+            { match: '.', checks: 'the sum from 1 to n', cause: 'Loop while <code>i &lt;= n</code>, adding i and then increasing it.' }],
+          tests: ns.map(n => P.t(`sum_to(${n}) is ${f(n)}`, `sum_to(${n})`, f(n))).join('\n'),
+          hint: 'Trace it with n = 2. Is 2 ever added?'
+        };
+      }
+      if (v === 2) {
+        const pm = R.pick([40, 50, 60]), c = l => l.filter(m => m >= pm).length;
+        return {
+          prompt: intro(`return how many marks are at least ${pm}`),
+          starter: `def count_passes(marks):\n    count = 0\n    for m in marks:\n        if m >= ${pm}:\n            count = count + 1\n        return count\n`,
+          solution: `def count_passes(marks):  # a list of marks\n    count = 0  # no passes counted yet\n    for m in marks:  # look at every mark\n        if m >= ${pm}:  # a pass\n            count = count + 1  # count it\n    return count  # FIX: lined up with for, so it runs after the whole loop\n`,
+          think: ['Try a list where the first mark fails and later ones pass: it returns 0 — far too few.', 'A debug print inside the loop would show it runs only once. The <code>return</code> is indented inside the loop, so the function ends on the first pass.', 'Move <code>return count</code> left, to line up with <code>for</code>.'],
+          diagnose: [
+            { match: '.', when: '^\\s{8}return\\s+count', checks: 'counting every mark', cause: 'The bug is still there: <code>return count</code> is inside the loop, so only the first mark is checked. Line it up with <code>for</code>.' },
+            { match: '.', checks: `how many marks are at least ${pm}`, cause: 'Count inside the loop; return after it.' }],
+          tests: [...lists, [pm - 10, pm, pm + 5]].map(l => P.t(`count_passes(${py.r(l)}) is ${c(l)}`, `count_passes(${py.r(l)})`, c(l))).join('\n'),
+          hint: 'How many times does the loop run before return?'
+        };
+      }
+      const avg = l => l.reduce((a, b) => a + b, 0) / l.length;
+      return {
+        prompt: intro('return the mean of the marks'),
+        starter: 'def average(marks):\n    total = 0\n    for m in marks:\n        total = m\n    return total / len(marks)\n',
+        solution: 'def average(marks):  # a non-empty list of marks\n    total = 0  # running total\n    for m in marks:  # every mark\n        total = total + m  # FIX: add to the total instead of replacing it\n    return total / len(marks)  # the mean\n',
+        think: ['Try [60, 80]: the mean is 70, but it returns 40.0 — that is 80 ÷ 2, as if only the last mark counted.', 'Trace <code>total</code>: 0, then 60, then 80. It is <b>replaced</b> each time, not added to.', 'Write <code>total = total + m</code>.'],
+        diagnose: [
+          { match: '.', when: 'total\\s*=\\s*m\\s*$', checks: 'adding up every mark', cause: 'The bug is still there: <code>total = m</code> replaces the total. Add to it: <code>total = total + m</code>.' },
+          { match: '.', checks: 'the mean of the marks', cause: 'Keep a running total with <code>total = total + m</code>, then divide by the number of marks.' }],
+        tests: lists.map(l => P.tf(`average(${py.r(l)}) ≈ ${py.f(avg(l))}`, `average(${py.r(l)})`, { f: avg(l) })).join('\n'),
+        hint: 'Trace total through the loop for two marks.'
+      };
+    } }
+  ]);
+
 })(CodeCraft.practice);

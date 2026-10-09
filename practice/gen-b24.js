@@ -326,4 +326,55 @@
       };
     } }
   ]);
+
+  /* ===== Lesson tabs (Try it): counting steps for B2.4.1 ===== */
+  P.add('B2.4.1', [
+    { id: 'bigo-step-code', kind: 'code', term: 'Construct', marks: 3, make(R) {
+      const v = R.int(0, 2), ns = [R.int(3, 6), R.int(8, 12), 1, 0];
+      if (v === 0) {
+        const f = n => (n * (n - 1)) / 2;
+        return {
+          prompt: 'Write <code>count_pairs(n)</code> that counts how many times the inner line runs in this loop over n items, and returns the count:<pre class="q-pre">for i in range(n):\n    for j in range(i + 1, n):\n        # compare item i with item j</pre>',
+          starter: 'def count_pairs(n):\n    pass\n',
+          solution: 'def count_pairs(n):  # how many comparisons for n items\n    count = 0  # no steps counted yet\n    for i in range(n):  # outer loop: n passes\n        for j in range(i + 1, n):  # inner loop: n − 1 − i passes\n            count = count + 1  # one comparison\n    return count  # n(n − 1)/2 — it grows like n², so O(n²)\n',
+          think: ['Counting operations: copy the loops, and add 1 where the work happens.', 'The inner loop runs n − 1 times, then n − 2, … then 0: n(n − 1)/2 in total.', 'That grows like n², so the algorithm is O(n²) — the ½ is dropped in Big O.'],
+          diagnose: [
+            { match: 'count_pairs\\(0\\)|count_pairs\\(1\\)', checks: 'very small n, where there are no pairs', cause: 'With 0 or 1 items the inner loop never runs, so the count stays 0.' },
+            { match: '.', when: 'range\\(\\s*n\\s*\\)\\s*:\\s*\\n\\s*for\\s+j\\s+in\\s+range\\(\\s*n\\s*\\)', checks: 'the inner loop\'s range', cause: 'The inner loop starts at i + 1: <code>range(i + 1, n)</code>.' },
+            { match: '.', checks: 'the number of comparisons', cause: 'Copy the two loops and add 1 to a counter inside the inner one.' }],
+          tests: ns.map(n => P.t(`count_pairs(${n}) is ${f(n)}`, `count_pairs(${n})`, f(n))).join('\n'),
+          hint: 'Two loops, a counter in the inner one.'
+        };
+      }
+      if (v === 1) {
+        const hs = [R.pick([16, 32, 64]), R.int(20, 100), 1, 2], f = n => { let c = 0; while (n > 1) { n = Math.floor(n / 2); c++; } return c; };
+        return {
+          prompt: 'Write <code>halvings(n)</code> that returns how many times n can be halved (with <code>//</code>) before it reaches 1. This count is why halving algorithms like binary search are O(log n).',
+          starter: 'def halvings(n):\n    pass\n',
+          solution: 'def halvings(n):  # a whole number, 1 or more\n    count = 0  # no halvings yet\n    while n > 1:  # keep going while there is more than 1 left\n        n = n // 2  # halve it (whole numbers only)\n        count = count + 1  # count this step\n    return count  # about log₂ n\n',
+          think: ['Repeat "halve n and count" while n is above 1.', 'For 16: 16 → 8 → 4 → 2 → 1 is 4 steps, and 2⁴ = 16. That is log₂ 16.', 'Doubling n adds only one step — that is O(log n).'],
+          diagnose: [
+            { match: 'halvings\\(1\\)', checks: 'n = 1, which needs no halvings', cause: 'Loop only while <code>n &gt; 1</code>, so 1 gives 0.' },
+            { match: '.', when: 'n\\s*=\\s*n\\s*/\\s*2', checks: 'halving with whole numbers', cause: 'Use <code>//</code>: <code>/</code> gives floats, and e.g. 3 / 2 = 1.5 is still above 1, so you count an extra step.' },
+            { match: '.', checks: 'the number of halvings', cause: 'while n &gt; 1: n = n // 2; count = count + 1.' }],
+          tests: hs.map(n => P.t(`halvings(${n}) is ${f(n)}`, `halvings(${n})`, f(n))).join('\n'),
+          hint: 'while n > 1: n = n // 2 …'
+        };
+      }
+      const f = n => (n * (n + 1)) / 2, ss = [10, 100, R.int(20, 999), 0];
+      return {
+        prompt: 'Write <code>sum_to(n)</code> that returns 1 + 2 + … + n in <b>O(1)</b> time — the same small number of steps whatever n is. That means <b>no loop</b>: use the formula n(n + 1) ÷ 2.',
+        starter: 'def sum_to(n):\n    pass\n',
+        solution: 'def sum_to(n):  # add 1 + 2 + … + n\n    return n * (n + 1) // 2  # one calculation whatever n is: O(1). // keeps it a whole number\n',
+        think: ['A loop would do n additions: O(n). The formula does a fixed number of operations: O(1).', 'Brackets make Python add 1 to n before multiplying.', 'n(n + 1) is always even, so <code>//</code> gives the exact whole-number answer.'],
+        diagnose: [
+          { match: '.', when: 'n\\s*\\*\\s*n\\s*\\+\\s*1', checks: 'the formula', cause: 'Without brackets, <code>n * n + 1 // 2</code> means n² + 0. Write <code>n * (n + 1) // 2</code>.' },
+          { match: '.', when: '[^/]/\\s*2', checks: 'a whole-number answer', cause: '<code>/</code> gives a float like 55.0. Use <code>//</code>.' },
+          { match: '.', checks: 'the sum from 1 to n', cause: 'return n * (n + 1) // 2.' }],
+        tests: ss.map(n => P.t(`sum_to(${n}) is ${f(n)}`, `sum_to(${n})`, f(n))).join('\n'),
+        banned: [{ label: 'a loop (for)', re: '\\bfor\\b' }, { label: 'a loop (while)', re: '\\bwhile\\b' }, { label: 'sum()', re: '\\bsum\\s*\\(' }], hint: 'return n * (n + 1) // 2'
+      };
+    } }
+  ]);
+
 })(CodeCraft.practice);

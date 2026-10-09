@@ -561,4 +561,66 @@
       };
     } }
   ]);
+
+  /* ===== Lesson tabs (Try it / Trace it): static arrays for B2.2.1 ===== */
+  P.add('B2.2.1', [
+    { id: 'sarr-code', kind: 'code', term: 'Construct', marks: 3, make(R) {
+      const v = R.int(0, 2), vals = R.ints(4, 10, 99);
+      if (v === 0) return {
+        prompt: 'A static array <code>arr</code> has a fixed number of slots, and <code>count</code> slots are in use (slots 0 to count − 1). Write <code>store(arr, count, value)</code>: if there is a free slot, put <code>value</code> in the next one and return the new count; if the array is full, change nothing and return <code>count</code>.',
+        starter: 'def store(arr, count, value):\n    pass\n',
+        solution: 'def store(arr, count, value):  # a static array, the slots in use, and a new value\n    if count < len(arr):  # a free slot? The last index is len(arr) - 1\n        arr[count] = value  # count is also the index of the next free slot\n        count = count + 1  # one more slot in use\n    return count  # the new count — unchanged if the array was full\n',
+        think: ['Slots 0 … count − 1 are full, so the next free slot is index <code>count</code>.', 'The array is full when <code>count</code> equals its length — then a static array can\'t grow, so change nothing.', 'Return the count so the caller can keep track of it.'],
+        diagnose: [
+          { match: 'full', checks: 'a full array', cause: 'Check <code>count &lt; len(arr)</code> before storing; if it is full, return count without changing arr.' },
+          { match: '.', when: 'append', checks: 'storing in a fixed slot', cause: 'A static array never grows — store with <code>arr[count] = value</code>, not <code>append</code>.' },
+          { match: '.', checks: 'storing in the next free slot', cause: 'Put the value at index <code>count</code>, then return <code>count + 1</code>.' }],
+        tests: [P.tblock(`storing ${vals[0]} then ${vals[1]} in 3 empty slots`, `arr = [None] * 3\nc = 0\nc = store(arr, c, ${vals[0]})\nc = store(arr, c, ${vals[1]})\nreturn [arr, c]`, [[vals[0], vals[1], null], 2]),
+          P.tblock('storing in a full array changes nothing', `arr = [${vals[2]}, ${vals[3]}]\nc = store(arr, 2, 5)\nreturn [arr, c]`, [[vals[2], vals[3]], 2])].join('\n'),
+        banned: [{ label: 'append()', re: '\\.append\\s*\\(' }], hint: 'if count < len(arr): arr[count] = value …'
+      };
+      if (v === 1) return {
+        prompt: 'A static array can\'t grow, so a dynamic structure makes a new, bigger array and copies the items across. Write <code>grow(arr)</code> that returns a new array <b>twice as long</b>, with the items of <code>arr</code> in the same positions and <code>None</code> in the new slots. Don\'t use <code>append</code>.',
+        starter: 'def grow(arr):\n    pass\n',
+        solution: 'def grow(arr):  # a full static array\n    bigger = [None] * (len(arr) * 2)  # allocate a new block twice the size\n    for i in range(len(arr)):  # every slot of the old array\n        bigger[i] = arr[i]  # copy it to the same index\n    return bigger  # the caller uses the new array from now on\n',
+        think: ['Make the new array first, full-size: <code>[None] * (len(arr) * 2)</code>.', 'Copy index by index, so every item keeps its position.', 'Return the new array — the old one is left unchanged. This copying is the hidden cost of resizing.'],
+        diagnose: [
+          { match: 'unchanged', checks: 'that the original array is not changed', cause: 'Build and return a <b>new</b> array; don\'t modify <code>arr</code>.' },
+          { match: '.', when: '\\[None\\s*\\*', checks: 'making the new array', cause: '<code>[None] * n</code> repeats a one-item list; <code>[None * n]</code> multiplies None, which fails.' },
+          { match: '.', checks: 'the new array\'s contents', cause: 'Make <code>[None] * (len(arr) * 2)</code>, copy <code>arr[i]</code> into the same index for every i, and return it.' }],
+        tests: [P.t(`grow([${vals[0]}, ${vals[1]}]) is [${vals[0]}, ${vals[1]}, None, None]`, `grow([${vals[0]}, ${vals[1]}])`, [vals[0], vals[1], null, null]),
+          P.t('grow(["a"]) is ["a", None]', 'grow(["a"])', ['a', null]),
+          P.tblock('the original array is unchanged', `a = [${vals[2]}, ${vals[3]}, ${vals[0]}]\nb = grow(a)\nreturn [a, len(b)]`, [[vals[2], vals[3], vals[0]], 6])].join('\n'),
+        banned: [{ label: 'append()', re: '\\.append\\s*\\(' }, { label: 'extend()', re: '\\.extend\\s*\\(' }], hint: 'bigger = [None] * (len(arr) * 2), then copy each item.'
+      };
+      const arrs = [[vals[0], vals[1], null, null], [null, null, null], [vals[2], vals[3], vals[0], vals[1], null]], used = a => a.filter(x => x !== null).length;
+      return {
+        prompt: 'In a static array, empty slots hold <code>None</code>. Write <code>used(arr)</code> that returns how many slots hold a value. <b>No built-ins:</b> don\'t use <code>len</code>, <code>sum</code> or <code>count</code>.',
+        starter: 'def used(arr):\n    pass\n',
+        solution: 'def used(arr):  # a static array; None marks an empty slot\n    total = 0  # no used slots found yet\n    for x in arr:  # every slot, used or not\n        if x is not None:  # a real value is stored here\n            total = total + 1  # count it\n    return total  # how many slots are in use\n',
+        think: ['A static array always has the same number of slots, so its length doesn\'t tell you how many are in use.', 'Visit every slot and count the ones that aren\'t <code>None</code> — the count pattern.', '<code>x is not None</code> is the usual test for "this slot holds something".'],
+        diagnose: [
+          { match: 'None, None, None\\]\\)', checks: 'an array with no values', cause: 'Count only slots that are not None; an empty array gives 0.' },
+          { match: '.', checks: 'the number of used slots', cause: 'Start at 0 and add 1 for each slot where <code>x is not None</code>.' }],
+        tests: arrs.map(a => P.t(`used(${py.r(a)}) is ${used(a)}`, `used(${py.r(a)})`, used(a))).join('\n'),
+        banned: P.ban('len', 'sum').concat([{ label: '.count()', re: '\\.count\\s*\\(' }]), hint: 'for x in arr: if x is not None: …'
+      };
+    } },
+    { id: 'sarr-output', kind: 'output', term: 'Determine', marks: 3, make(R) {
+      const size = R.int(3, 4), values = R.ints(size + R.int(1, 2), 10, 99), arr = Array(size).fill(null), out = [], story = [];
+      let count = 0;
+      for (const v of values) {
+        if (count < size) { arr[count] = v; story.push(`${v} goes in slot ${count}`); count++; }
+        else { out.push(`Full: ${v}`); story.push(`count is ${size}, so ${v} is refused`); }
+      }
+      out.push(py.r(arr), String(count));
+      return {
+        prompt: 'What does this program print?',
+        code: `SIZE = ${size}\narr = [None] * SIZE\ncount = 0\nfor v in ${py.r(values)}:\n    if count < SIZE:\n        arr[count] = v\n        count = count + 1\n    else:\n        print("Full:", v)\nprint(arr)\nprint(count)`,
+        answer: out.join('\n'),
+        explain: P.list(story) + `<p>The array was made with ${size} slots and never grows — that is what makes it a <b>static</b> structure — so the extra values can't be stored.</p>`
+      };
+    } }
+  ]);
+
 })(CodeCraft.practice);

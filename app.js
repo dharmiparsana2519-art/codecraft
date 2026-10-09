@@ -376,7 +376,7 @@ log.close()
           <section class="step" id="step-${s.key}" data-step="${s.key}" aria-labelledby="h-${s.key}">
             <header class="sec-head"><span class="sec-k">${i + 1}</span><h2 id="h-${s.key}">${s.title}</h2>
               ${hasSection(id, s.key) ? `<button class="btn sm mark${r.sec[s.key] ? ' done' : ''}" data-mark="${s.key}" aria-pressed="${!!r.sec[s.key]}">${r.sec[s.key] ? ICON('check') + 'Done' : 'Mark as done'}</button>` : ''}</header>
-            ${hasSection(id, s.key) ? `<div class="card prose">${content[s.key]}</div>` : placeholder(s.key, l)}
+            ${!hasSection(id, s.key) ? placeholder(s.key, l) : content[s.key].lq ? `<div class="lq-host" data-lq="${s.key}"></div>` : `<div class="card prose">${content[s.key]}</div>`}
           </section>`).join('')}
         ${hasPractice(id) ? (() => { const st = topicStat(id); return `
         <section class="card practice-cta tape" aria-label="Practice">
@@ -415,6 +415,11 @@ log.close()
     });
     // "Build it from scratch" notes: Run buttons, line-by-line steppers and live trace tables.
     if (CodeCraft.notes && CodeCraft.notes.all[id]) CodeCraft.notes.hydrate($('#step-learn'), () => playground);
+    // Try it / Trace it / Check: question sets from the practice generators, recorded like any practice answer.
+    $$('.lq-host').forEach(host => CodeCraft.lessonQs.mount(host, id, host.dataset.lq, {
+      onResult: (q, res) => recordResult(q, res),
+      lastAnswer: q => { const it = H.items[qid(q)]; return it ? it.attempts[it.attempts.length - 1] : null; }
+    }));
   }
 
   function toggleSection(l, key, btn) {

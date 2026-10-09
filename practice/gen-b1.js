@@ -365,4 +365,210 @@
     } }
   ]);
 
+
+  /* ===== Lesson tabs (Try it / Trace it): code and output questions for the start and B1 lessons ===== */
+  P.add('start-2', [
+    { id: 'first-code', kind: 'code', term: 'Construct', marks: 2, make(R) {
+      const v = R.int(0, 2);
+      if (v === 0) {
+        const school = R.pick(['Hillside', 'Riverside', 'Lakeview', 'Northgate']), year = R.int(2026, 2029);
+        return {
+          prompt: `Create two variables: <code>school</code>, holding the text "${school}", and <code>year</code>, holding the whole number ${year}.`,
+          starter: '# Create the two variables here\n',
+          solution: `school = "${school}"  # text goes in quotes: a string\nyear = ${year}  # no quotes: a whole number, an int\n`,
+          think: ['A variable is created by <b>assignment</b>: the name, then <code>=</code>, then the value.', `Text needs quotes, so <code>"${school}"</code> is a string. A number has no quotes — <code>"${year}"</code> in quotes would be a string, not an int.`],
+          diagnose: [
+            { match: '^school', checks: `that school holds the text "${school}"`, cause: `Write <code>school = "${school}"</code> — check the spelling, the capital letter and the quotes.` },
+            { match: 'is the int', when: `year\\s*=\\s*["']`, checks: `that year holds the number ${year}`, cause: `With quotes, year is the string "${year}". Leave the quotes off a number.` },
+            { match: '.', checks: `that year holds the whole number ${year}`, cause: `Write <code>year = ${year}</code>.` }],
+          tests: [P.t(`school holds "${school}"`, 'school', school), P.t(`year is the int ${year}`, '[type(year).__name__, year]', ['int', year])].join('\n'),
+          hint: 'Text goes in quotes; numbers don\'t.'
+        };
+      }
+      if (v === 1) {
+        const item = R.pick(['sandwich', 'juice', 'muffin', 'salad']), price = R.int(2, 6), qty = R.int(2, 5);
+        return {
+          prompt: `The canteen sells a ${item} for $${price}. Add one line that creates <code>total</code>, the cost of <code>quantity</code> ${item}s. Use the two variables, not the numbers.`,
+          starter: `price = ${price}\nquantity = ${qty}\n# create total here\n`,
+          solution: `price = ${price}  # the cost of one ${item}\nquantity = ${qty}  # how many are bought\ntotal = price * quantity  # * multiplies; using the variables means it works for any price or quantity\n`,
+          think: ['The cost of several items is price × quantity. In Python, multiply with <code>*</code>.', 'Write it with the variable names, so the line still gives the right total if the price or quantity changes.'],
+          diagnose: [
+            { match: 'is an int', when: '/', checks: 'that total is a whole number', cause: 'You only need <code>*</code> here — dividing gives a float.' },
+            { match: '.', when: 'total\\s*=\\s*price\\s*\\+', checks: `that total is ${price} × ${qty}`, cause: '<code>+</code> adds; to find the cost of several items, multiply with <code>*</code>.' },
+            { match: '.', checks: `that total is ${price * qty}`, cause: 'Write <code>total = price * quantity</code>.' }],
+          tests: [P.t(`total is ${price * qty}`, 'total', price * qty), P.t('total is an int', 'type(total).__name__', 'int')].join('\n'),
+          hint: 'total = price * quantity'
+        };
+      }
+      const name = R.pick(P.data.names);
+      return {
+        prompt: `<code>name</code> holds "${name}". Create <code>message</code>, holding <code>Hello, ${name}!</code>, by joining strings with <code>+</code> (use the variable <code>name</code>).`,
+        starter: `name = "${name}"\n# create message here\n`,
+        solution: `name = "${name}"  # a string\nmessage = "Hello, " + name + "!"  # + joins strings exactly, so the comma, space and ! must be in the quotes\n`,
+        think: ['<code>+</code> between strings joins them with nothing in between, so every space and punctuation mark has to be written inside the quotes.', 'Use the variable, not the text "' + name + '", so the line works for any name.'],
+        diagnose: [
+          { match: '.', when: 'message\\s*=\\s*"Hello,"\\s*\\+', checks: 'the exact text, including the space', cause: 'There is no space after the comma: <code>+</code> adds nothing between strings. Write <code>"Hello, "</code> with the space inside the quotes.' },
+          { match: '.', when: '"name"', checks: 'that the variable is used', cause: 'With quotes, <code>"name"</code> is the word name, not the variable. Leave the quotes off.' },
+          { match: '.', checks: `that message is "Hello, ${name}!"`, cause: 'Write <code>message = "Hello, " + name + "!"</code>.' }],
+        tests: [P.t(`message is "Hello, ${name}!"`, 'message', `Hello, ${name}!`), P.t('message ends with "!"', 'message[-1]', '!')].join('\n'),
+        hint: 'message = "Hello, " + name + "!"'
+      };
+    } }
+  ]);
+
+  P.add('start-2', [
+    { id: 'start-mcq', kind: 'mcq', term: 'State', marks: 1, make(R) {
+      const n = R.pick(P.data.names), a = R.int(2, 9), b = R.int(2, 9);
+      const QS = [
+        [`What does <code>print("${n}", ${a})</code> show?`, `${n} ${a}`, [[`${n}${a}`, 'Commas in print add a space between the items.'], [`"${n}", ${a}`, 'print shows the values, not the quotes and commas you typed.'], [`${n}, ${a}`, 'The comma separates the items in the code; it isn\'t printed.']], 'Commas in print separate the items, and print puts one space between them.',
+          ['print shows each item\'s value — no quotes, no commas.', 'Items separated by commas get one space between them.']],
+        [`What does <code>print("${a}" + "${b}")</code> show?`, `${a}${b}`, [[String(a + b), 'With quotes these are strings, so + joins them — it doesn\'t add.'], [`${a} ${b}`, '+ joins strings with no space between them.'], ['An error', 'Joining two strings with + is allowed.']], `In quotes, "${a}" and "${b}" are strings; + joins strings exactly as they are.`,
+          ['Look at the quotes: both values are strings.', '+ between strings joins them with nothing added in between.']],
+        ['Which line is a <b>comment</b>?', '# total of the marks', [['print("# total")', 'The # is inside a string, so it\'s printed — it doesn\'t start a comment.'], ['total = 0', 'That is an assignment.'], ['"total of the marks"', 'A string on its own is a value, not a comment.']], 'A comment starts with # outside any string; Python ignores the rest of the line.',
+          ['A comment starts with <code>#</code>…', '…but only when the # isn\'t inside quotes.']],
+        [`What is the data type of <code>x</code> after <code>x = input("Age: ")</code>, if the user types ${a + 10}?`, 'str (a string)', [['int', 'input() always returns text, even if the user types digits.'], ['float', 'input() never converts — you must cast with float().'], ['bool', 'input() returns the text that was typed.']], 'input() always gives a string; use int() or float() to turn it into a number.',
+          ['input() returns exactly what was typed, as text.', `So "${a + 10}" is a string until you cast it with <code>int()</code>.`]],
+        ['Why does <code>Print("Hi")</code> crash with a NameError?', 'Python is case-sensitive, and only lower-case print exists', [['print needs single quotes', 'Single and double quotes both work.'], ['The brackets should be square', 'Function calls use round brackets.'], ['"Hi" must be a variable', 'Printing a string is fine.']], 'Print and print are different names; only print is built in.',
+          ['A NameError means Python doesn\'t know a name.', 'Capital letters make a different name — <code>Print</code> isn\'t defined.']],
+        [`What is the type of <code>${a}.5</code>?`, 'float', [['int', 'It has a decimal point, so it is not a whole number.'], ['str', 'There are no quotes around it.'], ['bool', 'Booleans are only True and False.']], 'A number with a decimal point is a float (IB: decimal).',
+          ['No quotes, so it is a number, not a string.', 'It has a decimal point, so it is a float.']],
+        ['Where does the output of <code>print</code> appear in CodeCraft?', 'In the console under the editor', [['In the Files tab', 'Files shows the virtual files, not printed output.'], ['In a pop-up window', 'Output goes to the console.'], ['Nowhere until the program is saved', 'Output appears as soon as you press Run.']], 'Run sends the program to Python; everything it prints appears in the console.',
+          ['Press Run (or Ctrl+Enter).', 'Printed lines, input boxes and error messages all appear in the console.']],
+        [`Which line stores the whole number ${a * 100} so it can be used in arithmetic?`, `pupils = ${a * 100}`, [[`pupils = "${a * 100}"`, 'The quotes make it a string.'], [`${a * 100} = pupils`, 'The variable name must be on the left of =.'], [`int pupils = ${a * 100}`, 'Python doesn\'t declare types like this.']], 'Assignment puts the name on the left and the value on the right; no quotes for a number.',
+          ['In an assignment the variable name goes on the left of <code>=</code>.', 'A number without quotes is an int, ready for arithmetic.']]
+      ];
+      const [q, ok, wrong, why, steps] = R.pick(QS);
+      return { prompt: q, options: [{ text: ok, ok: true, why }, ...wrong.map(w => ({ text: w[0], why: w[1] }))], steps };
+    } }
+  ]);
+
+  P.add('B1.1.1', [
+    { id: 'spec-code', kind: 'code', term: 'Construct', marks: 4, make(R) {
+      const prices = [R.int(3, 6), R.int(3, 7), R.int(2, 5)], cost = l => { let t = 0, c = 0; for (const d of l) if (d >= 1 && d <= 3 && c < 3) { t += prices[d - 1]; c++; } return t; };
+      const valid = [R.int(1, 3), R.int(1, 3)], bad = [R.int(1, 3), R.pick([0, 4, 7, 9]), R.pick([-1, 5, 6]), R.int(1, 3)], lim = [R.int(1, 3), R.int(1, 3), R.int(1, 3), R.int(1, 3), R.int(1, 3)];
+      const cases = [['a valid order', valid], ['invalid dish numbers are ignored', bad], ['only the first 3 dishes count', lim], ['an empty order', []]];
+      return {
+        prompt: `<p>Specification for the canteen pre-order system:</p><ul><li><b>Constraint:</b> dishes 1, 2 and 3 cost $${prices[0]}, $${prices[1]} and $${prices[2]}; an order counts at most 3 dishes.</li><li><b>Input:</b> a list of dish numbers. <b>Output:</b> the total price.</li><li><b>Evaluation criteria:</b> (1) the total is correct; (2) numbers other than 1–3 are ignored; (3) only the first 3 valid dishes count.</li></ul><p>Write <code>order_total(dishes)</code> to meet it. <code>PRICES</code> is given.</p>`,
+        starter: `PRICES = [${prices.join(', ')}]\n\ndef order_total(dishes):\n    pass\n`,
+        solution: `PRICES = [${prices.join(', ')}]  # constraint: prices of dishes 1, 2 and 3\n\ndef order_total(dishes):  # input: a list of dish numbers\n    total = 0  # running total of the price\n    count = 0  # how many dishes have been accepted\n    for d in dishes:  # look at each dish number in order\n        if d >= 1 and d <= 3 and count < 3:  # criterion 2 (a real dish) and criterion 3 (the limit)\n            total = total + PRICES[d - 1]  # dish 1 is at index 0, so subtract 1\n            count = count + 1  # one more dish accepted\n    return total  # output: the total price\n`,
+        think: ['Each evaluation criterion is a test your function must pass — read them as a checklist.', 'Loop over the dish numbers, keeping a running total and a count of dishes accepted.', 'Accept a dish only if it is 1–3 <b>and</b> fewer than 3 dishes have been accepted.', 'Prices are in a list starting at index 0, so dish d costs <code>PRICES[d - 1]</code>.'],
+        diagnose: [
+          { match: '.', when: 'PRICES\\[d\\]', checks: 'the price of each dish', cause: 'Dish 1 is at index 0, so use <code>PRICES[d - 1]</code>.' },
+          { match: 'invalid', checks: 'that numbers other than 1–3 are ignored (criterion 2)', cause: 'Only add a dish when <code>d &gt;= 1 and d &lt;= 3</code>. Without that check, 0 or 4 either crash or pick the wrong price.' },
+          { match: 'first 3', checks: 'that only the first 3 valid dishes count (criterion 3)', cause: 'Keep a count of dishes accepted and only add while <code>count &lt; 3</code>.' },
+          { match: 'empty', checks: 'that an empty order costs 0', cause: 'Start the total at 0 and return it after the loop.' },
+          { match: '.', checks: 'the total of a valid order (criterion 1)', cause: 'Add <code>PRICES[d - 1]</code> for each valid dish, and return the total after the loop.' }],
+        tests: cases.map(([label, l]) => P.t(`${label}: order_total(${py.r(l)}) is ${cost(l)}`, `order_total(${py.r(l)})`, cost(l))).join('\n'),
+        hint: 'Loop over the dishes; add PRICES[d - 1] only for 1–3, and stop counting after 3.'
+      };
+    } },
+    { id: 'spec-output', kind: 'output', term: 'Determine', marks: 3, make(R) {
+      const prices = [R.int(3, 6), R.int(3, 7), R.int(2, 5)];
+      const orders = R.shuffle([R.int(1, 3), R.int(1, 3), R.pick([0, 4, 5, 7]), R.int(1, 3), R.int(1, 3)]);
+      let total = 0, count = 0; const out = [], story = [];
+      for (const d of orders) {
+        if (d < 1 || d > 3) { out.push(`Rejected ${d}`); story.push(`${d} isn't a dish: rejected`); }
+        else if (count === 3) { out.push('Limit reached'); story.push(`${d} is valid but 3 dishes are already in the order`); }
+        else { total += prices[d - 1]; count++; story.push(`dish ${d} adds $${prices[d - 1]} (total ${total}, count ${count})`); }
+      }
+      out.push(`${count} ${total}`);
+      return {
+        prompt: 'This program implements the canteen specification (prices, at most 3 dishes, invalid numbers rejected). What does it print?',
+        code: `PRICES = [${prices.join(', ')}]\nMAX = 3\norders = ${py.r(orders)}\ntotal = 0\ncount = 0\nfor d in orders:\n    if d < 1 or d > 3:\n        print("Rejected", d)\n    elif count == MAX:\n        print("Limit reached")\n    else:\n        total = total + PRICES[d - 1]\n        count = count + 1\nprint(count, total)`,
+        answer: out.join('\n'),
+        explain: P.list(story) + `<p>Finally it prints the count and the total: ${count} ${total}. Each branch matches a part of the specification — that's how a trace table shows the evaluation criteria are met.</p>`
+      };
+    } }
+  ]);
+
+  P.add('B1.1.2-3', [
+    { id: 'ct-code', kind: 'code', term: 'Construct', marks: 3, make(R) {
+      const hi = R.pick([70, 75, 80]), mid = R.pick([50, 55, 60]), v = R.int(0, 1);
+      const band = a => (a >= hi ? 'A' : a >= mid ? 'B' : 'C');
+      const BAND = `def band(avg):  # already written: turns an average into A, B or C\n    if avg >= ${hi}:  # highest boundary first\n        return "A"  # top band\n    elif avg >= ${mid}:  # only tested if below ${hi}\n        return "B"  # middle band\n    return "C"  # everything else\n`;
+      if (v === 0) {
+        const avgs = [R.int(85, 99), R.int(mid, hi - 1), R.int(20, mid - 1), hi, mid];
+        return {
+          prompt: `A report program has been <b>decomposed</b> into parts. Write the part <code>band(avg)</code>: return "A" for an average of ${hi} or more, "B" for ${mid} or more, otherwise "C".`,
+          starter: 'def band(avg):\n    pass\n',
+          solution: BAND,
+          think: ['Decomposition gives this part one clear job: input an average, output a letter.', 'Test the highest boundary first, so the first true test is the right band.', '<code>&gt;=</code> because the boundary value itself belongs to the higher band.'],
+          diagnose: [
+            { match: `band\\(${hi}\\)|band\\(${mid}\\)`, checks: 'a value exactly on a boundary', cause: 'The boundary belongs to the higher band: use <code>&gt;=</code>, not <code>&gt;</code>.' },
+            { match: '.', when: `avg\\s*>=\\s*${mid}\\s*:[\\s\\S]*avg\\s*>=\\s*${hi}`, checks: 'the order of the tests', cause: `Test ${hi} before ${mid}, or every average of ${mid}+ gets a B.` },
+            { match: '.', checks: 'the band for each average', cause: `Return "A" when avg &gt;= ${hi}, "B" when avg &gt;= ${mid}, otherwise "C".` }],
+          tests: avgs.map(a => P.t(`band(${a}) is "${band(a)}"`, `band(${a})`, band(a))).join('\n'),
+          hint: `if avg >= ${hi}: return "A" … elif avg >= ${mid}: return "B" … return "C"`
+        };
+      }
+      const lists = [Array.from({ length: 5 }, () => R.int(30, 99)), Array.from({ length: 4 }, () => R.int(30, 99))], letter = R.pick(['A', 'B', 'C']);
+      const cnt = (l, x) => l.filter(a => band(a) === x).length;
+      return {
+        prompt: `<b>Pattern recognition:</b> the same "band" step is needed for every student, and <code>band(avg)</code> is already written. Write <code>count_band(avgs, letter)</code> that returns how many averages in the list are in that band — by <b>calling</b> <code>band</code>, not copying its code.`,
+        starter: BAND.replace(/  # [^\n]*/g, '') + '\n\ndef count_band(avgs, letter):\n    pass\n',
+        solution: BAND + `\n\ndef count_band(avgs, letter):  # a list of averages and a band letter\n    count = 0  # none counted yet\n    for a in avgs:  # the same step for every average\n        if band(a) == letter:  # reuse the solved part instead of repeating its code\n            count = count + 1  # this average is in the band\n    return count  # after checking them all\n`,
+        think: ['The work for one average is already solved by <code>band</code>; this part just repeats it for every average and counts.', 'Call <code>band(a)</code> inside the loop and compare its result with <code>letter</code>.', 'This is the count pattern: start at 0, add 1 on a match, return after the loop.'],
+        diagnose: [
+          { match: '.', when: '^\\s{8,}return\\s+count', checks: 'counting every average', cause: 'Your <code>return</code> is inside the loop, so only the first average is checked.' },
+          { match: '.', when: '(?<![\\s\\S])(?![\\s\\S]*band\\(a\\)|[\\s\\S]*band\\(\\w+\\)\\s*==)', checks: 'that band is reused', cause: 'Call <code>band(a)</code> for each average and compare the letter it returns.' },
+          { match: '.', checks: 'the number of averages in the band', cause: 'Start at 0, add 1 when <code>band(a) == letter</code>, and return the count after the loop.' }],
+        tests: lists.map(l => P.t(`count_band(${py.r(l)}, "${letter}") is ${cnt(l, letter)}`, `count_band(${py.r(l)}, "${letter}")`, cnt(l, letter))).concat([P.t(`count_band([], "${letter}") is 0`, `count_band([], "${letter}")`, 0)]).join('\n'),
+        hint: 'Loop over avgs, call band(a), count the matches.'
+      };
+    } },
+    { id: 'ct-output', kind: 'output', term: 'Determine', marks: 3, make(R) {
+      const hi = R.pick([70, 75]), mid = R.pick([50, 55]);
+      const names = R.sample(P.data.names, 3);
+      const recs = names.map(n => { const m = [R.int(40, 99), R.int(40, 99)]; let last = R.int(40, 99); last -= (m[0] + m[1] + last) % 3; return [n, [m[0], m[1], last]]; });
+      const avg = l => (l[0] + l[1] + l[2]) / 3, band = a => (a >= hi ? 'A' : a >= mid ? 'B' : 'C');
+      const out = recs.map(([n, l]) => `${n} ${py.f(avg(l))} ${band(avg(l))}`);
+      return {
+        prompt: 'This program was <b>decomposed</b> into two functions, then a loop applies them to every student (<b>pattern recognition</b>). What does it print?',
+        code: `def average(marks):\n    total = 0\n    for m in marks:\n        total = total + m\n    return total / len(marks)\n\n\ndef band(avg):\n    if avg >= ${hi}:\n        return "A"\n    elif avg >= ${mid}:\n        return "B"\n    return "C"\n\n\nstudents = ${py.r(recs)}\nfor record in students:\n    avg = average(record[1])\n    print(record[0], avg, band(avg))`,
+        answer: out.join('\n'),
+        explain: P.list(recs.map(([n, l]) => `${n}: (${l.join(' + ')}) / 3 = ${py.f(avg(l))} → ${band(avg(l))}`)) + '<p><code>/</code> always gives a float, so each average prints with <code>.0</code>.</p>'
+      };
+    } }
+  ]);
+
+  P.add('B1.1.4', [
+    { id: 'fc-code', kind: 'code', term: 'Construct', marks: 3, make(R) {
+      if (R.chance(0.5)) {
+        const price = R.int(8, 14), lim = R.int(12, 16), d = R.int(2, 5);
+        const nodes = [{ id: 's', type: 'term', text: 'Start', c: 0, r: 0 }, { id: 'p', type: 'proc', text: `price = ${price}`, c: 0, r: 1 }, { id: 'i', type: 'io', text: 'INPUT age', c: 0, r: 2 },
+          { id: 'd', type: 'dec', text: `age < ${lim} ?`, c: 0, r: 3 }, { id: 'x', type: 'proc', text: `price = price - ${d}`, c: 0, r: 4 }, { id: 'o', type: 'io', text: 'OUTPUT price', c: 0, r: 5 }, { id: 'e', type: 'term', text: 'End', c: 0, r: 6 }];
+        const edges = [{ a: 's', b: 'p' }, { a: 'p', b: 'i' }, { a: 'i', b: 'd' }, { a: 'd', b: 'x', label: 'Yes' }, { a: 'x', b: 'o' }, { a: 'd', b: 'o', from: 'right', to: 'right', label: 'No', via: [[0.82, 3], [0.82, 5]] }, { a: 'o', b: 'e' }];
+        const f = a => (a < lim ? price - d : price), ages = [lim - R.int(1, 5), lim, lim + R.int(1, 9), R.int(5, 9)];
+        return {
+          prompt: `Write <code>ticket_price(age)</code> so that it does what this flowchart does. The INPUT becomes the parameter and the OUTPUT becomes the value you <b>return</b>.`,
+          visual: P.flowchart(nodes, edges),
+          starter: 'def ticket_price(age):\n    pass\n',
+          solution: `def ticket_price(age):  # INPUT age becomes the parameter\n    price = ${price}  # process box: price = ${price}\n    if age < ${lim}:  # decision diamond; Yes leads to the discount box\n        price = price - ${d}  # process box on the Yes path\n    return price  # OUTPUT price — the No path skips straight here\n`,
+          think: ['Follow the arrows from Start and turn each symbol into one line, in the same order.', 'The decision becomes an <code>if</code>. Its Yes path holds the discount box; the No path goes straight to OUTPUT, so there is no <code>else</code>.', 'OUTPUT becomes <code>return</code>, after the <code>if</code>, because both paths reach it.'],
+          diagnose: [
+            { match: `ticket_price\\(${lim}\\)`, checks: `an age of exactly ${lim}`, cause: `The diamond asks <code>age &lt; ${lim}</code>; ${lim} itself takes the No path. Use <code>&lt;</code>, not <code>&lt;=</code>.` },
+            { match: '.', when: '^\\s{8,}return', checks: 'both paths reaching OUTPUT', cause: 'The OUTPUT box is reached from both paths, so <code>return price</code> goes after the <code>if</code>, not inside it.' },
+            { match: '.', checks: 'the price for each age', cause: `Start with price = ${price}; subtract ${d} only if age &lt; ${lim}; then return price.` }],
+          tests: ages.map(a => P.t(`ticket_price(${a}) is ${f(a)}`, `ticket_price(${a})`, f(a))).join('\n'),
+          hint: `price = ${price}; if age < ${lim}: price = price - ${d}; return price`
+        };
+      }
+      const s = R.int(1, 3), f = n => { let t = 0, c = 1; while (c <= n) { t += c; c += s; } return t; }, ns = [R.int(4, 9), R.int(10, 15), 1, 0];
+      return {
+        prompt: `Write <code>flow_total(n)</code> so that it does what this flowchart does. The INPUT becomes the parameter; return the value that is OUTPUT.`,
+        visual: loopChart(['INPUT n', 'total = 0', 'count = 1'], 'count <= n ?', ['total = total + count', `count = count + ${s}`], 'OUTPUT total'),
+        starter: 'def flow_total(n):\n    pass\n',
+        solution: `def flow_total(n):  # INPUT n becomes the parameter\n    total = 0  # process box: total = 0\n    count = 1  # process box: count = 1\n    while count <= n:  # the diamond has an arrow back up to it, so it is a loop\n        total = total + count  # first box on the Yes path\n        count = count + ${s}  # last box before the arrow goes back up\n    return total  # the No exit leads to OUTPUT total\n`,
+        think: ['An arrow that goes back <b>up</b> to a decision means a loop: <code>while</code> the answer is Yes.', 'The boxes on the Yes path become the indented loop body, in the order the arrows go.', 'The No exit leads to OUTPUT, after the loop.'],
+        diagnose: [
+          { match: 'flow_total\\(0\\)', checks: 'n = 0, where the loop never runs', cause: 'With n = 0 the diamond says No straight away, so the output is the starting total, 0.' },
+          { match: '.', when: 'count\\s*<\\s*n', checks: 'the loop condition', cause: 'The diamond asks <code>count &lt;= n</code> — the last value is included.' },
+          { match: '.', when: '^\\s{8,}return', checks: 'the output after the loop', cause: '<code>return total</code> belongs after the loop (the No exit), not inside it.' },
+          { match: '.', checks: 'the total the flowchart outputs', cause: `Set total = 0 and count = 1; while count &lt;= n, add count to total then add ${s} to count; return total.` }],
+        tests: ns.map(n => P.t(`flow_total(${n}) is ${f(n)}`, `flow_total(${n})`, f(n))).join('\n'),
+        hint: 'while count <= n: total = total + count; count = count + …'
+      };
+    } }
+  ]);
+
 })(CodeCraft.practice);

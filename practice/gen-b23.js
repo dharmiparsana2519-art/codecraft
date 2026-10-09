@@ -543,4 +543,53 @@
         hint: 'Return the string — don\'t print it. Convert the score with str() before joining.' };
     } }
   ]);
+
+  /* ===== Lesson tabs (Try it): sequence code questions for B2.3.1 ===== */
+  P.add('B2.3.1', [
+    { id: 'seq-code', kind: 'code', term: 'Construct', marks: 3, make(R) {
+      const v = R.int(0, 2), names = R.sample(P.data.names, 5);
+      if (v === 0) {
+        const ls = [names.slice(0, 3), names.slice(1, 5), [names[0]]], f = l => (l.length === 1 ? l.slice() : [l[l.length - 1], ...l.slice(1, -1), l[0]]);
+        return {
+          prompt: 'Write <code>swap_ends(items)</code> that swaps the first and last items of the list, in place, and returns the list. Use a temporary variable.',
+          starter: 'def swap_ends(items):\n    pass\n',
+          solution: 'def swap_ends(items):  # a list with at least one item\n    temp = items[0]  # save the first item before it is overwritten\n    items[0] = items[-1]  # the last item moves to the front\n    items[-1] = temp  # the saved first item goes to the end\n    return items  # the same list, changed in place\n',
+          think: ['Overwriting <code>items[0]</code> loses its value, so save it in <code>temp</code> first.', 'Then copy the last item to the front, and the saved value to the end.', 'The order of these three lines is the whole algorithm — swap any two and a value is lost.'],
+          diagnose: [
+            { match: '.', when: '^\\s*items\\[0\\]\\s*=\\s*items\\[-1\\]\\s*\\n\\s*items\\[-1\\]\\s*=\\s*items\\[0\\]', checks: 'swapping without losing a value', cause: 'After <code>items[0] = items[-1]</code> the first item is gone, so both ends end up the same. Save it in <code>temp</code> first.' },
+            { match: '.', checks: 'the first and last items swapped', cause: 'temp = items[0]; items[0] = items[-1]; items[-1] = temp; return items.' }],
+          tests: ls.map(l => P.t(`swap_ends(${py.r(l)}) is ${py.r(f(l))}`, `swap_ends(${py.r(l)})`, f(l))).join('\n'),
+          hint: 'Save, overwrite, restore.'
+        };
+      }
+      if (v === 1) {
+        const ls = [names.slice(0, 3), names.slice(2, 5)], f = l => [l[1], l[2], l[0]];
+        return {
+          prompt: 'Write <code>rotate_left(items)</code> for a list of 3 items: every item moves one place to the left and the first goes to the end, so <code>["A", "B", "C"]</code> becomes <code>["B", "C", "A"]</code>. Do it in place with a temporary variable (no slicing).',
+          starter: 'def rotate_left(items):\n    pass\n',
+          solution: 'def rotate_left(items):  # a list of exactly 3 items\n    temp = items[0]  # save the first item\n    items[0] = items[1]  # each item moves one place left…\n    items[1] = items[2]  # …in this order, so each value is copied before its slot is overwritten\n    items[2] = temp  # the saved first item goes to the end\n    return items  # the rotated list\n',
+          think: ['The first item will be overwritten, so save it first.', 'Move the items left starting from the front: copy item 1 into slot 0, then item 2 into slot 1. Going the other way would overwrite a value before it has moved.', 'Finally put the saved item in the last slot.'],
+          diagnose: [
+            { match: '.', when: 'items\\[1\\]\\s*=\\s*items\\[2\\][\\s\\S]*items\\[0\\]\\s*=\\s*items\\[1\\]', checks: 'the order of the moves', cause: 'Moving item 2 first overwrites item 1 before it has been copied. Move from the front: slot 0 first, then slot 1.' },
+            { match: '.', checks: 'every item moved one place left', cause: 'temp = items[0]; items[0] = items[1]; items[1] = items[2]; items[2] = temp.' }],
+          tests: ls.map(l => P.t(`rotate_left(${py.r(l)}) is ${py.r(f(l))}`, `rotate_left(${py.r(l)})`, f(l))).join('\n'),
+          banned: [{ label: 'slicing', re: '\\[\\s*-?\\d*\\s*:' }], hint: 'Save items[0], shift left, put temp last.'
+        };
+      }
+      const ns = [3, 1, 0, R.int(4, 7)], f = n => Array.from({ length: Math.max(0, n) }, (_, i) => n - i);
+      return {
+        prompt: 'Write <code>countdown(n)</code> that returns a list counting down from n to 1, e.g. <code>countdown(3)</code> is <code>[3, 2, 1]</code>. Use a <code>while</code> loop, and make sure it always stops.',
+        starter: 'def countdown(n):\n    pass\n',
+        solution: 'def countdown(n):  # count down from n\n    result = []  # the numbers so far\n    while n > 0:  # stops, because n gets smaller every time round\n        result.append(n)  # record the current number…\n        n = n - 1  # …then move towards 0 — this order makes n the first number\n    return result  # e.g. [3, 2, 1]\n',
+        think: ['Repeat "record the number, then make it one smaller" while it is above 0.', 'The loop condition must be able to become False: <code>n &gt; 0</code>, with <code>n</code> going down each time.', 'The order of the two lines in the loop decides whether n or n − 1 comes first.'],
+        diagnose: [
+          { match: 'countdown\\(0\\)', checks: 'n = 0, which gives an empty list', cause: 'With <code>while n &gt; 0</code>, the loop doesn\'t run at all for 0, so return the empty list.' },
+          { match: '.', when: 'n\\s*=\\s*n\\s*\\+\\s*1', checks: 'that the loop ends', cause: '<code>n = n + 1</code> moves away from 0, so the loop never ends. Subtract 1.' },
+          { match: '.', checks: 'the countdown list', cause: 'Append n, then subtract 1, while n &gt; 0. If the list starts at n − 1, swap those two lines.' }],
+        tests: ns.map(n => P.t(`countdown(${n}) is ${py.r(f(n))}`, `countdown(${n})`, f(n))).join('\n'),
+        hint: 'while n > 0: append, then subtract.'
+      };
+    } }
+  ]);
+
 })(CodeCraft.practice);

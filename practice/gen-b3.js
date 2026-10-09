@@ -464,4 +464,75 @@
         answer: `<p>The ${attr} is stored as a private attribute, <code>self.__${attr}</code>, so code outside the ${cls} class can't change it directly. <span class="mk">[1]</span> The only way to change it is a public setter method, which checks that ${rule} before storing the new value. <span class="mk">[1]</span> Invalid values are rejected, so the object's ${attr} always stays valid, while a getter still lets other code read it. <span class="mk">[1]</span></p>` };
     } }
   ]);
+
+  /* ===== Lesson tabs (Try it / Trace it): B3.1.1 and B3.1.2 ===== */
+  P.add('B3.1.1', [
+    { id: 'oop-code', kind: 'code', term: 'Construct', marks: 4, make(R) {
+      const [a, b] = R.sample(P.data.names, 2), [h1, h2] = R.sample(['Red', 'Blue', 'Green', 'Yellow'], 2), p1 = R.int(2, 9), p2 = R.int(1, 6);
+      if (R.chance(0.5)) return {
+        prompt: 'Write a class <code>Student</code>. The constructor takes <code>name</code> and <code>house</code>, and every new student starts with <code>points</code> = 0. The method <code>award(n)</code> adds n to this student\'s points.',
+        starter: 'class Student:\n    pass\n',
+        solution: 'class Student:  # the blueprint for every student\n    def __init__(self, name, house):  # constructor: runs for each new Student\n        self.name = name  # each object\'s own name\n        self.house = house  # and house\n        self.points = 0  # every student starts on 0, so it isn\'t a parameter\n\n    def award(self, n):  # a method: self is the student it is called on\n        self.points = self.points + n  # change only this student\'s points\n',
+        think: ['The constructor stores each value on the object with <code>self.</code>; points isn\'t passed in, it just starts at 0.', 'A method takes <code>self</code> first, so it knows which student to change.', 'Each object has its own attributes, so awarding one student never changes another.'],
+        diagnose: [
+          { match: '.', when: 'def\\s+\\w+\\(\\s*\\)|def\\s+award\\(\\s*n\\s*\\)', checks: 'calling a method on an object', cause: 'Every method needs <code>self</code> as its first parameter.' },
+          { match: 'separate', checks: 'that two students keep separate points', cause: 'Store points on the object (<code>self.points</code>), not in a variable shared by the class.' },
+          { match: 'starts', checks: 'a new student\'s points', cause: 'Set <code>self.points = 0</code> in the constructor.' },
+          { match: '.', checks: 'the student\'s attributes after awards', cause: 'Set self.name, self.house and self.points in __init__; award adds n to self.points.' }],
+        tests: [P.tblock(`a new student starts with 0 points`, `s = Student("${a}", "${h1}")\nreturn [s.name, s.house, s.points]`, [a, h1, 0]),
+          P.tblock(`award(${p1}) then award(${p2})`, `s = Student("${a}", "${h1}")\ns.award(${p1})\ns.award(${p2})\nreturn s.points`, p1 + p2),
+          P.tblock('two students keep separate points', `x = Student("${a}", "${h1}")\ny = Student("${b}", "${h2}")\nx.award(${p1})\nreturn [x.points, y.points]`, [p1, 0])].join('\n'),
+        hint: 'self.points = 0 in __init__; award adds to self.points.'
+      };
+      const t = R.pick(P.data.books);
+      return {
+        prompt: 'Write a class <code>Book</code>. The constructor takes a <code>title</code>; a new book is not on loan (<code>on_loan</code> is False). <code>borrow()</code> returns True and marks it on loan, or returns False if it is already on loan. <code>give_back()</code> marks it as not on loan.',
+        starter: 'class Book:\n    pass\n',
+        solution: 'class Book:  # the blueprint for every book\n    def __init__(self, title):  # constructor\n        self.title = title  # this book\'s title\n        self.on_loan = False  # a new book is on the shelf\n\n    def borrow(self):  # try to borrow this book\n        if self.on_loan:  # already out?\n            return False  # refuse\n        self.on_loan = True  # mark it as borrowed\n        return True  # success\n\n    def give_back(self):  # return it to the library\n        self.on_loan = False  # back on the shelf\n',
+        think: ['The object keeps its own state: <code>self.on_loan</code>, starting False.', '<code>borrow</code> checks the state first, then changes it — so a book can\'t be borrowed twice.', '<code>give_back</code> resets the state.'],
+        diagnose: [
+          { match: '.', when: 'def\\s+\\w+\\(\\s*\\)', checks: 'calling a method on an object', cause: 'Every method needs <code>self</code> as its first parameter.' },
+          { match: 'twice', checks: 'borrowing a book that is already on loan', cause: 'Check <code>self.on_loan</code> first and return False if it is True.' },
+          { match: 'again', checks: 'borrowing after giving back', cause: 'give_back must set <code>self.on_loan = False</code>.' },
+          { match: '.', checks: 'a new book and its first borrow', cause: 'Set self.on_loan = False in __init__; borrow sets it True and returns True.' }],
+        tests: [P.tblock('a new book is not on loan', `b = Book("${t}")\nreturn [b.title, b.on_loan]`, [t, false]),
+          P.tblock('borrowing twice: True then False', `b = Book("${t}")\nreturn [b.borrow(), b.borrow()]`, [true, false]),
+          P.tblock('after give_back it can be borrowed again', `b = Book("${t}")\nb.borrow()\nb.give_back()\nreturn b.borrow()`, true)].join('\n'),
+        hint: 'self.on_loan = False; borrow checks it before changing it.'
+      };
+    } },
+    { id: 'oop-output', kind: 'output', term: 'Determine', marks: 3, make(R) {
+      const [n1, n2] = R.sample(P.data.names, 2), p = [R.int(2, 9), R.int(2, 9), R.int(2, 9)], alias = R.chance(0.6);
+      const a = p[0] + (alias ? p[1] : 0), b = p[2], c = alias ? a : p[1];
+      return {
+        prompt: 'What does this program print?',
+        code: `class Student:\n    def __init__(self, name):\n        self.name = name\n        self.points = 0\n\n    def award(self, n):\n        self.points = self.points + n\n\n\na = Student("${n1}")\nb = Student("${n2}")\nc = ${alias ? 'a' : `Student("${n1}")`}\na.award(${p[0]})\nc.award(${p[1]})\nb.award(${p[2]})\nprint(a.points, b.points, c.points)\nprint(a.name, c.name)`,
+        answer: `${a} ${b} ${c}\n${n1} ${n1}`,
+        explain: alias
+          ? `<p><code>c = a</code> doesn't create an object: c is a second name for the same Student. So both awards (${p[0]} and ${p[1]}) go to one object: ${a}. b is a separate object with ${b}.</p>`
+          : `<p><code>Student("${n1}")</code> creates a <b>new</b> object, even with the same name, so c's points (${p[1]}) are separate from a's (${p[0]}). Each object keeps its own attributes.</p>`
+      };
+    } }
+  ]);
+
+  P.add('B3.1.2', [
+    { id: 'uml-output', kind: 'output', term: 'Determine', marks: 3, make(R) {
+      const [x, y, z] = R.sample(P.data.names, 3), ops = R.shuffle([['l1', 'assign', x], ['l1', 'assign', y], ['l2', 'assign', y], ['l1', 'release'], ['l2', 'assign', z]]).slice(0, 4);
+      const st = { l1: '', l2: '' }, out = [], story = [];
+      for (const [l, op, n] of ops) {
+        if (op === 'assign') { const ok = st[l] === ''; if (ok) st[l] = n; out.push(py.b(ok)); story.push(`${l}.assign("${n}") → ${py.b(ok)}${ok ? '' : ` (already owned by ${st[l]})`}`); }
+        else { st[l] = ''; story.push(`${l}.release() — free again (prints nothing)`); }
+      }
+      out.push(`${st.l1 || 'free'} ${st.l2 || 'free'}`);
+      const show = l => `${l}.getOwner() if not ${l}.isFree() else "free"`;
+      return {
+        prompt: 'This class was coded from the UML diagram shown. What does the program print?',
+        visual: P.uml({ name: 'Locker', attrs: [['-', 'owner', 'str']], methods: [['+', 'isFree()', 'bool'], ['+', 'assign(name: str)', 'bool'], ['+', 'release()', ''], ['+', 'getOwner()', 'str']] }),
+        code: `class Locker:\n    def __init__(self):\n        self.__owner = ""\n\n    def isFree(self):\n        return self.__owner == ""\n\n    def assign(self, name):\n        if not self.isFree():\n            return False\n        self.__owner = name\n        return True\n\n    def release(self):\n        self.__owner = ""\n\n    def getOwner(self):\n        return self.__owner\n\n\nl1 = Locker()\nl2 = Locker()\n` + ops.map(([l, op, n]) => (op === 'assign' ? `print(${l}.assign("${n}"))` : `${l}.release()`)).join('\n') + `\nprint(${show('l1')}, ${show('l2')})`,
+        answer: out.join('\n'),
+        explain: P.list(story) + '<p>Each Locker object has its own private owner, which only its methods can change. The last line uses the public <code>getOwner()</code> and <code>isFree()</code> — outside code can\'t read <code>__owner</code> directly.</p>'
+      };
+    } }
+  ]);
+
 })(CodeCraft.practice);
